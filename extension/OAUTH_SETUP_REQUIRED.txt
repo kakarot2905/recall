@@ -1,0 +1,20 @@
+⚠️ IMPORTANT: Configure Google OAuth Client ID ⚠️
+
+The manifest.json currently contains a placeholder for the Google OAuth Client ID:
+
+"oauth2": {
+  "client_id": "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+  ...
+}
+
+TO ENABLE GOOGLE SIGN-IN:
+1. Follow the setup guide: GOOGLE_AUTH_SETUP.md
+2. Get your Client ID from Google Cloud Console
+3. Replace YOUR_GOOGLE_CLIENT_ID with your actual Client ID
+4. Reload the extension in chrome://extensions/
+
+WITHOUT THIS SETUP:
+- Email/password authentication will work normally ✅
+- Google Sign-In button will show an error message ❌
+
+The extension will still function with email/password authentication only.

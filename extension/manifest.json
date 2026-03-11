@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Recall",
+  "version": "1.0.0",
+  "description": "Generate personalized MCQs and flash cards from your notes",
+  "permissions": ["storage", "activeTab", "identity"],
+  "host_permissions": ["http://localhost:3000/*"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Recall - Study Smarter"
+  },
+  "oauth2": {
+    "client_id": "751339140299-tl0lcurv051kp3gapcff4iigf51qli94.apps.googleusercontent.com",
+    "scopes": ["openid", "email", "profile"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-widget.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
