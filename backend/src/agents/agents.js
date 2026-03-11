@@ -45,7 +45,7 @@ export async function agent2(topic, enrichedContent) {
         const startedAt = Date.now();
         console.log('[Agent2] Started', { topic, contentLength: enrichedContent.length });
 
-        const prompt = `Based on the following content about "${topic}", generate 10 MCQ questions. Each must have exactly 4 options and 1 correct answer. Assign difficulty 1-5. Return ONLY a valid JSON array, no markdown, no explanation. Schema: [{ type: "mcq", question, options: [4 strings], correct, difficulty }]
+        const prompt = `Based on the following content about "${topic}", generate 10 MCQ questions. Each must have exactly 4 options and 1 correct answer. Assign difficulty 1-5. For each card also include a short youtubeQuery (YouTube search terms) and googleQuery (Google search terms) to help the learner explore the concept further. Return ONLY a valid JSON array, no markdown, no explanation. Schema: [{ type: "mcq", question, options: [4 strings], correct, difficulty, youtubeQuery, googleQuery }]
 
 Content:
 ${enrichedContent}`;
@@ -84,7 +84,7 @@ export async function agent3(topic, enrichedContent) {
 - 5 fill in the blank questions with a single word answer
 - 5 one-line facts (informative statements, not questions)
 
-Assign difficulty 1-5 to each. Return ONLY a valid JSON array, no markdown, no explanation. Schema: [{ type: "short_answer"|"fill_blank"|"fact", question, answer, content, difficulty }]
+Assign difficulty 1-5 to each. For each card also include a short youtubeQuery (YouTube search terms) and googleQuery (Google search terms) to help the learner explore the concept further. Return ONLY a valid JSON array, no markdown, no explanation. Schema: [{ type: "short_answer"|"fill_blank"|"fact", question, answer, content, difficulty, youtubeQuery, googleQuery }]
 
 For facts: populate content only. For others: populate question and answer only.
 

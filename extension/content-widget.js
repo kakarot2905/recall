@@ -4,6 +4,7 @@
   const STORAGE_KEY = "recallWidgetCards";
   const POSITION_STORAGE_KEY = "recallWidgetPosition";
   const DOT_POSITION_STORAGE_KEY = "recallWidgetDotPosition";
+  const DND_MODE_STORAGE_KEY = "recallWidgetDndMode";
   const IDLE_THRESHOLD_MS = 5000;
   const IDLE_CHECK_MS = 500;
   const DASHBOARD_SYNC_EVENT = "RECALL_SYNC_WIDGET_CARDS";
@@ -164,6 +165,50 @@
     }
   }
 
+  function updateDndButtonVisual() {
+    const dndBtn = document.getElementById(`${WIDGET_ID}-dnd-btn`);
+    if (!dndBtn) {
+      return;
+    }
+
+    if (isDndMode) {
+      dndBtn.style.background = "#1f7a33";
+      dndBtn.style.border = "1px solid #1f7a33";
+      dndBtn.style.color = "#ffffff";
+    } else {
+      dndBtn.style.background = "#f3f5fb";
+      dndBtn.style.border = "1px solid #cfd6ea";
+      dndBtn.style.color = "#5a6aaa";
+    }
+  }
+
+  function persistDndMode() {
+    if (!isChromeStorageAvailable()) {
+      return;
+    }
+
+    chrome.storage.local.set({ [DND_MODE_STORAGE_KEY]: isDndMode });
+  }
+
+  function applyDndModeUi() {
+    const widget = document.getElementById(WIDGET_ID);
+    if (!widget) {
+      return;
+    }
+
+    if (isDndMode) {
+      isDndPreview = false;
+      widget.style.display = "none";
+      isWidgetVisible = false;
+      setDotVisible(true);
+    } else {
+      setDotVisible(false);
+      if (cards.length) {
+        renderCurrentCard();
+      }
+    }
+  }
+
   function createWidget() {
     if (document.getElementById(WIDGET_ID)) {
       return document.getElementById(WIDGET_ID);
@@ -256,7 +301,9 @@
     };
 
     const dndBtn = document.createElement("button");
-    dndBtn.textContent = "DND";
+    dndBtn.id = `${WIDGET_ID}-dnd-btn`;
+    dndBtn.title = "Do Not Disturb";
+    dndBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>`;
     dndBtn.style.fontSize = "10px";
     dndBtn.style.fontWeight = "700";
     dndBtn.style.border = "1px solid #cfd6ea";
@@ -264,8 +311,12 @@
     dndBtn.style.background = "#f3f5fb";
     dndBtn.style.color = "#5a6aaa";
     dndBtn.style.cursor = "pointer";
-    dndBtn.style.padding = "3px 8px";
+    dndBtn.style.padding = "0";
+    dndBtn.style.width = "22px";
     dndBtn.style.height = "22px";
+    dndBtn.style.display = "flex";
+    dndBtn.style.alignItems = "center";
+    dndBtn.style.justifyContent = "center";
     dndBtn.style.flexShrink = "0";
 
     const controlsRight = document.createElement("div");
@@ -273,34 +324,13 @@
     controlsRight.style.alignItems = "center";
     controlsRight.style.gap = "6px";
 
-    const updateDndButtonVisual = () => {
-      if (isDndMode) {
-        dndBtn.style.background = "#e9f8ec";
-        dndBtn.style.border = "1px solid #7bcf8d";
-        dndBtn.style.color = "#1f7a33";
-      } else {
-        dndBtn.style.background = "#f3f5fb";
-        dndBtn.style.border = "1px solid #cfd6ea";
-        dndBtn.style.color = "#5a6aaa";
-      }
-    };
-
     dndBtn.onclick = (e) => {
       e.stopPropagation();
       isDndMode = !isDndMode;
       isDndPreview = false;
+      persistDndMode();
       updateDndButtonVisual();
-
-      if (isDndMode) {
-        wrapper.style.display = "none";
-        isWidgetVisible = false;
-        setDotVisible(true);
-      } else {
-        setDotVisible(false);
-        if (cards.length) {
-          renderCurrentCard();
-        }
-      }
+      applyDndModeUi();
     };
 
     let isDragging = false;
@@ -378,6 +408,9 @@
     footer.style.marginTop = "8px";
     footer.style.fontSize = "11px";
     footer.style.color = "#66708a";
+    footer.style.display = "flex";
+    footer.style.alignItems = "center";
+    footer.style.justifyContent = "space-between";
     footer.id = `${WIDGET_ID}-footer`;
 
     wrapper.appendChild(titleContainer);
@@ -657,7 +690,7 @@
         (card.options || []).forEach((option) => {
           const isCorrect = normalizeAnswer(option) === correctAnswer;
           const isSelected = isCorrect || normalizeAnswer(state.userAnswer || "") === normalizeAnswer(option);
-          const btn = createOptionButton(option, isCorrect, isSelected, () => {}, !isSelected);
+          const btn = createOptionButton(option, isCorrect, isSelected, () => { }, !isSelected);
           body.appendChild(btn);
         });
 
@@ -795,7 +828,66 @@
       }
     }
 
-    footer.textContent = `${safeIndex + 1} / ${cards.length}`;
+    footer.innerHTML = "";
+
+    const footerCounter = document.createElement("span");
+    footerCounter.textContent = `${safeIndex + 1} / ${cards.length}`;
+    footer.appendChild(footerCounter);
+
+    const resourceBtns = document.createElement("div");
+    resourceBtns.style.display = "flex";
+    resourceBtns.style.alignItems = "center";
+    resourceBtns.style.gap = "5px";
+
+    if (card.youtubeQuery) {
+      const ytBtn = document.createElement("a");
+      ytBtn.href = `https://www.youtube.com/results?search_query=${encodeURIComponent(card.youtubeQuery)}`;
+      ytBtn.target = "_blank";
+      ytBtn.rel = "noopener noreferrer";
+      ytBtn.title = `YouTube: ${card.youtubeQuery}`;
+      ytBtn.style.display = "inline-flex";
+      ytBtn.style.alignItems = "center";
+      ytBtn.style.justifyContent = "center";
+      ytBtn.style.width = "22px";
+      ytBtn.style.height = "22px";
+      ytBtn.style.borderRadius = "50%";
+      ytBtn.style.background = "#fff0f0";
+      ytBtn.style.border = "1px solid #f5c6c6";
+      ytBtn.style.color = "#c4302b";
+      ytBtn.style.textDecoration = "none";
+      ytBtn.style.flexShrink = "0";
+      ytBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`;
+      ytBtn.onmouseover = () => (ytBtn.style.background = "#fddede");
+      ytBtn.onmouseout = () => (ytBtn.style.background = "#fff0f0");
+      resourceBtns.appendChild(ytBtn);
+    }
+
+    if (card.googleQuery) {
+      const gBtn = document.createElement("a");
+      gBtn.href = `https://www.google.com/search?q=${encodeURIComponent(card.googleQuery)}`;
+      gBtn.target = "_blank";
+      gBtn.rel = "noopener noreferrer";
+      gBtn.title = `Search: ${card.googleQuery}`;
+      gBtn.style.display = "inline-flex";
+      gBtn.style.alignItems = "center";
+      gBtn.style.justifyContent = "center";
+      gBtn.style.width = "22px";
+      gBtn.style.height = "22px";
+      gBtn.style.borderRadius = "50%";
+      gBtn.style.background = "#f0f4ff";
+      gBtn.style.border = "1px solid #c6d4f5";
+      gBtn.style.color = "#326fd1";
+      gBtn.style.textDecoration = "none";
+      gBtn.style.flexShrink = "0";
+      gBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+      gBtn.onmouseover = () => (gBtn.style.background = "#dde8ff");
+      gBtn.onmouseout = () => (gBtn.style.background = "#f0f4ff");
+      resourceBtns.appendChild(gBtn);
+    }
+
+    if (resourceBtns.hasChildNodes()) {
+      footer.appendChild(resourceBtns);
+    }
   }
 
   function triggerOnIdle() {
@@ -888,11 +980,14 @@
       return;
     }
 
-    chrome.storage.local.get([STORAGE_KEY], (result) => {
+    chrome.storage.local.get([STORAGE_KEY, DND_MODE_STORAGE_KEY], (result) => {
       if (chrome.runtime.lastError) {
         return;
       }
+      isDndMode = Boolean(result[DND_MODE_STORAGE_KEY]);
+      updateDndButtonVisual();
       setCards(result[STORAGE_KEY]);
+      applyDndModeUi();
     });
   }
 
@@ -901,11 +996,17 @@
       return;
     }
 
-    if (!changes[STORAGE_KEY]) {
-      return;
+    if (changes[DND_MODE_STORAGE_KEY]) {
+      isDndMode = Boolean(changes[DND_MODE_STORAGE_KEY].newValue);
+      isDndPreview = false;
+      updateDndButtonVisual();
+      applyDndModeUi();
     }
 
-    setCards(changes[STORAGE_KEY].newValue);
+    if (changes[STORAGE_KEY]) {
+      setCards(changes[STORAGE_KEY].newValue);
+      applyDndModeUi();
+    }
   });
 
   window.addEventListener("message", (event) => {

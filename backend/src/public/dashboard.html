@@ -398,6 +398,8 @@
                 <p><strong>${escapeHtml(questionOrContent)}</strong></p>
                 ${options.length ? `<p class="muted">Options: ${escapeHtml(options.join(" | "))}</p>` : ""}
                 ${answer ? `<p class="muted">Answer: ${escapeHtml(answer)}</p>` : ""}
+                ${card.youtubeQuery ? `<p class="muted" style="margin-top:4px"><a href="https://www.youtube.com/results?search_query=${encodeURIComponent(card.youtubeQuery)}" target="_blank" rel="noopener" style="color:#c4302b;text-decoration:none">&#9654; ${escapeHtml(card.youtubeQuery)}</a></p>` : ""}
+                ${card.googleQuery ? `<p class="muted"><a href="https://www.google.com/search?q=${encodeURIComponent(card.googleQuery)}" target="_blank" rel="noopener" style="color:#326fd1;text-decoration:none">&#128269; ${escapeHtml(card.googleQuery)}</a></p>` : ""}
               </article>
             `;
           })

@@ -31,6 +31,12 @@ const cardSchema = new mongoose.Schema({
         min: 1,
         max: 5,
         required: true
+    },
+    youtubeQuery: {
+        type: String
+    },
+    googleQuery: {
+        type: String
     }
 });
 
