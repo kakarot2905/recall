@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recall — Project Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --ink:    #0d0d14;
+    --paper:  #f5f3ee;
+    --cream:  #eceae3;
+    --accent: #ff4d1c;
+    --blue:   #1a3aff;
+    --green:  #00b87a;
+    --red:    #e8002a;
+    --mid:    #6b6860;
+    --border: #d4d1c8;
+  }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { box-shadow: none; }
+  }
+
+  body {
+    background: #2a2825;
+    font-family: 'DM Sans', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 32px 16px;
+  }
+
+  .page {
+    background: var(--paper);
+    width: 1080px;
+    min-height: 1527px;
+    position: relative;
+    box-shadow: 0 40px 120px rgba(0,0,0,0.5);
+    overflow: hidden;
+    animation: fadeIn 0.6s ease;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── BACKGROUND TEXTURE ── */
+  .page::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 92% 8%, rgba(255,77,28,0.07) 0%, transparent 40%),
+      radial-gradient(circle at 5% 95%, rgba(26,58,255,0.06) 0%, transparent 35%);
+    pointer-events: none;
+  }
+
+  .noise {
+    position: absolute;
+    inset: 0;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px;
+    pointer-events: none;
+  }
+
+  /* ── LAYOUT ── */
+  .inner {
+    position: relative;
+    z-index: 1;
+    padding: 44px 48px 40px;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 0;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .logo-block {}
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 86px;
+    line-height: 0.88;
+    color: var(--ink);
+    letter-spacing: 0.01em;
+  }
+
+  .logo span {
+    color: var(--accent);
+  }
+
+  .tagline {
+    font-size: 12.5px;
+    color: var(--mid);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 6px;
+    font-weight: 300;
+  }
+
+  .header-right {
+    text-align: right;
+    padding-top: 6px;
+  }
+
+  .pitch {
+    font-size: 14px;
+    color: var(--ink);
+    font-weight: 500;
+    max-width: 320px;
+    line-height: 1.5;
+    text-align: right;
+  }
+
+  .pitch em {
+    color: var(--accent);
+    font-style: normal;
+    font-weight: 500;
+  }
+
+  .meta-chips {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
+
+  .chip {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 2px;
+    letter-spacing: 0.04em;
+  }
+
+  .chip.accent { background: var(--accent); }
+  .chip.blue   { background: var(--blue); }
+
+  /* ── MAIN GRID ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--cream);
+    border: 1.5px solid var(--border);
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card.dark {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--paper);
+  }
+
+  .card.accent-fill {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .card.blue-fill {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+  }
+
+  .card-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mid);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .card.dark .card-label  { color: rgba(255,255,255,0.4); }
+  .card.accent-fill .card-label { color: rgba(255,255,255,0.7); }
+  .card.blue-fill .card-label   { color: rgba(255,255,255,0.7); }
+
+  .card-label::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  .card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  .card.dark .card-title        { color: #fff; }
+  .card.accent-fill .card-title { color: #fff; }
+  .card.blue-fill .card-title   { color: #fff; }
+
+  .card-body {
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--mid);
+    font-weight: 300;
+  }
+
+  .card.dark .card-body        { color: rgba(255,255,255,0.6); }
+  .card.accent-fill .card-body { color: rgba(255,255,255,0.85); }
+  .card.blue-fill .card-body   { color: rgba(255,255,255,0.85); }
+
+  /* spans */
+  .span2 { grid-column: span 2; }
+  .span3 { grid-column: span 3; }
+
+  /* ── PILL TAGS ── */
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+  }
+
+  .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 3px 9px;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    color: var(--ink);
+    background: var(--paper);
+  }
+
+  .tag.g { border-color: var(--green); color: var(--green); }
+  .tag.r { border-color: var(--red); color: var(--red); }
+  .tag.b { border-color: var(--blue); color: var(--blue); }
+  .tag.o { border-color: var(--accent); color: var(--accent); }
+
+  /* ── FLOW DIAGRAM ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .flow-step {
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    padding: 5px 10px;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--ink);
+    white-space: nowrap;
+    line-height: 1.3;
+    text-align: center;
+  }
+
+  .flow-step.hi {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .flow-arrow {
+    font-size: 12px;
+    color: var(--mid);
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
+
+  /* ── PHASE TIMELINE ── */
+  .phases {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .phase {
+    padding: 8px 10px;
+    border-top: 3px solid;
+  }
+
+  .phase:nth-child(1) { border-color: var(--accent); }
+  .phase:nth-child(2) { border-color: var(--blue); }
+  .phase:nth-child(3) { border-color: var(--green); }
+  .phase:nth-child(4) { border-color: #9333ea; }
+  .phase:nth-child(5) { border-color: #f59e0b; }
+  .phase:nth-child(6) { border-color: var(--ink); }
+
+  .phase-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    line-height: 1;
+    color: var(--ink);
+  }
+
+  .phase-name {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--ink);
+    margin: 3px 0 2px;
+    line-height: 1.2;
+  }
+
+  .phase-dur {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--mid);
+  }
+
+  /* ── TWO-MODE SPLIT ── */
+  .mode-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    margin-top: 10px;
+  }
+
+  .mode-half {
+    padding: 10px 12px;
+  }
+
+  .mode-half:first-child {
+    background: rgba(0,184,122,0.1);
+    border: 1px solid rgba(0,184,122,0.3);
+    border-right: none;
+  }
+
+  .mode-half:last-child {
+    background: rgba(232,0,42,0.08);
+    border: 1px solid rgba(232,0,42,0.25);
+  }
+
+  .mode-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+  }
+
+  .mode-half:first-child .mode-name { color: var(--green); }
+  .mode-half:last-child  .mode-name { color: var(--red); }
+
+  .mode-desc {
+    font-size: 10.5px;
+    color: var(--mid);
+    line-height: 1.45;
+    font-weight: 300;
+  }
+
+  /* ── LIST ── */
+  .dot-list {
+    list-style: none;
+    margin-top: 8px;
+  }
+
+  .dot-list li {
+    font-size: 11px;
+    color: var(--mid);
+    padding: 2px 0;
+    padding-left: 14px;
+    position: relative;
+    line-height: 1.4;
+    font-weight: 300;
+  }
+
+  .dot-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-size: 10px;
+    top: 3px;
+  }
+
+  .card.dark .dot-list li { color: rgba(255,255,255,0.55); }
+  .card.dark .dot-list li::before { color: rgba(255,255,255,0.3); }
+
+  /* ── FORMULA BOX ── */
+  .formula {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    padding: 10px 14px;
+    margin-top: 10px;
+    border-radius: 2px;
+    line-height: 1.6;
+  }
+
+  .formula .hl { color: var(--accent); }
+  .formula .hl2 { color: #4fd1c5; }
+
+  /* ── ARCH DIAGRAM ── */
+  .arch {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .arch-block {
+    border: 1.5px solid var(--border);
+    padding: 8px 10px;
+    text-align: center;
+  }
+
+  .arch-block-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .arch-items {
+    font-size: 9.5px;
+    color: var(--mid);
+    line-height: 1.6;
+    font-weight: 300;
+  }
+
+  .arch-conn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--border);
+    font-weight: 300;
+  }
+
+  /* ── BIG NUMBER ── */
+  .big-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 64px;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  .big-label {
+    font-size: 11px;
+    color: var(--mid);
+    font-weight: 300;
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    border-top: 2px solid var(--ink);
+    padding-top: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+  }
+
+  .footer-left {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--mid);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .footer-center {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    color: var(--ink);
+    letter-spacing: 0.1em;
+  }
+
+  .footer-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .stack-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .stack-label {
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--mid);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── DIVIDER LINE ── */
+  .vline {
+    width: 1.5px;
+    background: var(--border);
+    align-self: stretch;
+  }
+
+  /* ── AGENT STEPS ── */
+  .agents {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 8px;
+  }
+
+  .agent-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .agent-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    color: var(--accent);
+    width: 18px;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .agent-name {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink);
+    flex-shrink: 0;
+    width: 120px;
+  }
+
+  .agent-desc {
+    font-size: 10px;
+    color: var(--mid);
+    font-weight: 300;
+    line-height: 1.3;
+  }
+
+  .card.dark .agent-name { color: #fff; }
+  .card.dark .agent-desc { color: rgba(255,255,255,0.45); }
+  .card.dark .agent-num  { color: var(--accent); }
+
+  /* ── HIGHLIGHT BAR ── */
+  .hbar {
+    display: flex;
+    gap: 0;
+    margin-top: 10px;
+    height: 5px;
+  }
+
+  .hbar-seg {
+    height: 100%;
+    flex: 1;
+  }
+
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="noise"></div>
+  <div class="inner">
+
+    <!-- ══ HEADER ══ -->
+    <div class="header">
+      <div class="logo-block">
+        <div class="logo">RE<span>C</span>ALL</div>
+        <div class="tagline">Chrome Extension · Project Plan · Sudhakar Shinde</div>
+      </div>
+      <div class="header-right">
+        <div class="pitch">Revise smarter while you browse — <em>AI micro-questions</em>, timed by your brain's own forgetting curve.</div>
+        <div class="meta-chips">
+          <span class="chip accent">Ebbinghaus</span>
+          <span class="chip blue">SM-2</span>
+          <span class="chip">AI Agents</span>
+          <span class="chip">MV3</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MAIN GRID ══ -->
+    <div class="main-grid">
+
+      <!-- WHAT IT IS -->
+      <div class="card dark">
+        <div class="card-label">Product</div>
+        <div class="card-title">What It Does</div>
+        <div class="card-body">AI generates questions &amp; one-liner facts from your notes. Delivered as nudges while you browse — only when you're idle, never when working. Learns what you know and adjusts over time.</div>
+        <div class="tags">
+          <span class="tag o">MCQ</span>
+          <span class="tag o">Short Answer</span>
+          <span class="tag o">Flashcards</span>
+          <span class="tag o">Sources</span>
+        </div>
+      </div>
+
+      <!-- TWO MODES -->
+      <div class="card">
+        <div class="card-label">Modes</div>
+        <div class="card-title">Revision vs Study</div>
+        <div class="mode-split">
+          <div class="mode-half">
+            <div class="mode-name">Revision</div>
+            <div class="mode-desc">One question at a time, passively. Triggered by idle detection.</div>
+          </div>
+          <div class="mode-half">
+            <div class="mode-name">Study Reels</div>
+            <div class="mode-desc">Scrollable card feed you open intentionally — like Instagram Reels.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTIFICATION MODES -->
+      <div class="card">
+        <div class="card-label">Notification Style</div>
+        <div class="card-title">Casual vs Focused</div>
+        <div class="mode-split">
+          <div class="mode-half">
+            <div class="mode-name">Casual</div>
+            <div class="mode-desc">Silent green dot in corner. Click when ready. No interruption.</div>
+          </div>
+          <div class="mode-half">
+            <div class="mode-name">Focused</div>
+            <div class="mode-desc">Push notification fires after 3–4 min idle. Forced attention.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI PIPELINE -->
+      <div class="card dark span2">
+        <div class="card-label">AI Agent Pipeline</div>
+        <div class="card-title">How Notes Become Questions</div>
+        <div class="agents">
+          <div class="agent-row">
+            <div class="agent-num">1</div>
+            <div class="agent-name">Note Quality Checker</div>
+            <div class="agent-desc">Scores notes 1–10. Supplements from web if thin (&lt;5). Shows quality score to user.</div>
+          </div>
+          <div class="agent-row">
+            <div class="agent-num">2</div>
+            <div class="agent-name">Question Generator</div>
+            <div class="agent-desc">Generates MCQs with distractors, short answers, fill-in-the-blank. Tags difficulty 1–5.</div>
+          </div>
+          <div class="agent-row">
+            <div class="agent-num">3</div>
+            <div class="agent-name">Fact &amp; Flashcard Maker</div>
+            <div class="agent-desc">Extracts one-liners, analogies, common mistakes, real-world example cards.</div>
+          </div>
+          <div class="agent-row">
+            <div class="agent-num">4</div>
+            <div class="agent-name">Source Finder</div>
+            <div class="agent-desc">Finds 3–5 websites + YouTube links with timestamps for weak topics.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SM-2 + URGENCY -->
+      <div class="card accent-fill">
+        <div class="card-label">The Engine</div>
+        <div class="card-title">SM-2 + Urgency</div>
+        <div class="card-body">Wrong answer = shown sooner. Correct = interval grows. Multiple topics ranked by:</div>
+        <div class="formula" style="margin-top:8px; font-size:10px; padding:8px 10px;">
+          <span class="hl">urgency</span> =<br>
+          decay × (1/days_exam)<br>
+          × mistake_weight
+        </div>
+      </div>
+
+      <!-- SETUP FLOW -->
+      <div class="card span3">
+        <div class="card-label">User Journey — First Setup (5–10 min)</div>
+        <div class="flow" style="margin-top:8px;">
+          <div class="flow-step">Install Extension</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step hi">Demo Mode<br><span style="font-size:9px;font-weight:300;">Try sample topic first</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">Paste Notes<br>+ Topic + Date</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step hi">AI Pipeline<br><span style="font-size:9px;font-weight:300;">~30–60 sec</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">Calibration<br>Quiz (5 Qs)</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step hi">Choose Mode</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step" style="background:var(--green);color:#fff;border-color:var(--green);">First Notif<br>in &lt;10 min</div>
+        </div>
+      </div>
+
+      <!-- ARCHITECTURE -->
+      <div class="card span2">
+        <div class="card-label">System Architecture</div>
+        <div class="card-title">3-Layer Stack</div>
+        <div class="arch">
+          <div class="arch-block" style="border-color: rgba(26,58,255,0.4); background: rgba(26,58,255,0.04);">
+            <div class="arch-block-title" style="color:var(--blue);">Extension</div>
+            <div class="arch-items">Popup UI<br>Content Script<br>Service Worker<br>Chrome Alarms API</div>
+          </div>
+          <div class="arch-block" style="border-color: rgba(255,77,28,0.4); background: rgba(255,77,28,0.04);">
+            <div class="arch-block-title" style="color:var(--accent);">Backend</div>
+            <div class="arch-items">Node.js + Express<br>SM-2 Engine<br>Urgency Scheduler<br>Supabase Auth</div>
+          </div>
+          <div class="arch-block" style="border-color: rgba(0,184,122,0.4); background: rgba(0,184,122,0.04);">
+            <div class="arch-block-title" style="color:var(--green);">Data + AI</div>
+            <div class="arch-items">PostgreSQL<br>GPT-4o Agents<br>Card Performance<br>Ebbinghaus Decay</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div class="card">
+        <div class="card-label">Dashboard</div>
+        <div class="card-title">Track Progress</div>
+        <ul class="dot-list">
+          <li>Ebbinghaus decay graph per topic</li>
+          <li>Green / Red topic health cards</li>
+          <li>Daily streak → up to 60% off ₹100/mo</li>
+          <li>GitHub-style activity heatmap</li>
+          <li>Weak topics auto-linked to sources</li>
+        </ul>
+      </div>
+
+      <!-- BUILD PHASES -->
+      <div class="card span3">
+        <div class="card-label">Build Roadmap — 6–8 Weeks</div>
+        <div class="phases">
+          <div class="phase">
+            <div class="phase-num">01</div>
+            <div class="phase-name">Foundation</div>
+            <div class="phase-dur">Week 1</div>
+            <div class="card-body" style="font-size:10px; margin-top:5px;">Extension scaffold, Popup UI, Chrome Storage</div>
+          </div>
+          <div class="phase">
+            <div class="phase-num">02</div>
+            <div class="phase-name">AI Pipeline</div>
+            <div class="phase-dur">Weeks 2–3</div>
+            <div class="card-body" style="font-size:10px; margin-top:5px;">Backend API, DB, 3 AI agents, question generation</div>
+          </div>
+          <div class="phase">
+            <div class="phase-num">03</div>
+            <div class="phase-name">Core Loop</div>
+            <div class="phase-dur">Week 4</div>
+            <div class="card-body" style="font-size:10px; margin-top:5px;">SM-2, idle detection, notifications, answer capture</div>
+          </div>
+          <div class="phase">
+            <div class="phase-num">04</div>
+            <div class="phase-name">Study Reels</div>
+            <div class="phase-dur">Week 5</div>
+            <div class="card-body" style="font-size:10px; margin-top:5px;">Scrollable feed, card variety, color coding, sources</div>
+          </div>
+          <div class="phase">
+            <div class="phase-num">05</div>
+            <div class="phase-name">Dashboard</div>
+            <div class="phase-dur">Week 6</div>
+            <div class="card-body" style="font-size:10px; margin-top:5px;">Decay graph, streak, heatmap, weak topic alerts</div>
+          </div>
+          <div class="phase">
+            <div class="phase-num">06</div>
+            <div class="phase-name">Launch</div>
+            <div class="phase-dur">Weeks 7–8</div>
+            <div class="card-body" style="font-size:10px; margin-top:5px;">Monetisation, demo mode, calibration quiz, store</div>
+          </div>
+        </div>
+        <div class="hbar" style="margin-top:10px;">
+          <div class="hbar-seg" style="background:var(--accent);"></div>
+          <div class="hbar-seg" style="background:var(--blue);"></div>
+          <div class="hbar-seg" style="background:var(--green);"></div>
+          <div class="hbar-seg" style="background:#9333ea;"></div>
+          <div class="hbar-seg" style="background:#f59e0b;"></div>
+          <div class="hbar-seg" style="background:var(--ink);"></div>
+        </div>
+      </div>
+
+      <!-- MVP -->
+      <div class="card blue-fill">
+        <div class="card-label">MVP First</div>
+        <div class="card-title">Ship in 3 Weeks</div>
+        <div class="card-body">Phases 1–3 only. Green dot + 1 question + SM-2. Get 10 real users. Then build the rest.</div>
+        <div class="tags" style="margin-top:8px;">
+          <span class="tag" style="border-color:rgba(255,255,255,0.4);color:#fff;background:rgba(255,255,255,0.1);">Setup Form</span>
+          <span class="tag" style="border-color:rgba(255,255,255,0.4);color:#fff;background:rgba(255,255,255,0.1);">MCQ Gen</span>
+          <span class="tag" style="border-color:rgba(255,255,255,0.4);color:#fff;background:rgba(255,255,255,0.1);">Green Dot</span>
+          <span class="tag" style="border-color:rgba(255,255,255,0.4);color:#fff;background:rgba(255,255,255,0.1);">SM-2</span>
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div class="card" style="display:flex; gap:0; padding:0; overflow:hidden;">
+        <div style="flex:1; padding:18px 16px; border-right:1.5px solid var(--border);">
+          <div class="big-num" style="color:var(--accent);">8</div>
+          <div class="big-label">Max notifications per day cap</div>
+        </div>
+        <div style="flex:1; padding:18px 16px;">
+          <div class="big-num" style="color:var(--blue);">3–4</div>
+          <div class="big-label">Minutes idle before trigger fires</div>
+        </div>
+      </div>
+
+      <!-- TECH STACK -->
+      <div class="card">
+        <div class="card-label">Tech Stack</div>
+        <div class="card-title">Tools</div>
+        <div class="tags" style="margin-top:4px;">
+          <span class="tag b">Chrome MV3</span>
+          <span class="tag b">Node.js</span>
+          <span class="tag b">Express</span>
+          <span class="tag g">Supabase</span>
+          <span class="tag g">PostgreSQL</span>
+          <span class="tag o">GPT-4o</span>
+          <span class="tag o">SM-2</span>
+          <span class="tag">Railway</span>
+          <span class="tag">Razorpay</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ══ FOOTER ══ -->
+    <div class="footer">
+      <div class="footer-left">Sudhakar Shinde · VIT Pune · 2026</div>
+      <div class="footer-center">RECALL — REVISE WITHOUT STOPPING</div>
+      <div class="footer-right">
+        <span class="stack-dot" style="background:var(--accent);"></span><span class="stack-label">Extension</span>
+        <span class="stack-dot" style="background:var(--blue);"></span><span class="stack-label">Backend</span>
+        <span class="stack-dot" style="background:var(--green);"></span><span class="stack-label">AI</span>
+        <span class="stack-dot" style="background:var(--ink);"></span><span class="stack-label">DB</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
