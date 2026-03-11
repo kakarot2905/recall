@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recall Dashboard</title>
+    <style>
+      :root {
+        --bg: #f6f7fb;
+        --card: #ffffff;
+        --ink: #1d2433;
+        --muted: #5e6678;
+        --border: #d8deea;
+        --accent: #7a8cff;
+        --ok: #2e8b57;
+        --warn: #b06d00;
+        --error: #b42318;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 0 0, #eef1ff, var(--bg) 45%);
+      }
+
+      .layout {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .title {
+        margin: 0;
+        font-size: 28px;
+        letter-spacing: 0.2px;
+      }
+
+      .subtitle {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .button {
+        border: 1px solid var(--border);
+        background: var(--card);
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .button-danger {
+        border-color: #f1b7b5;
+        color: #8f1f1b;
+        background: #fff5f4;
+      }
+
+      .button-small {
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+
+      .panels {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+      }
+
+      .sources {
+        overflow: auto;
+        max-height: 340px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 10px;
+        border-bottom: 1px solid #edf0f7;
+        font-size: 13px;
+      }
+
+      th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      tr:hover {
+        background: #f9faff;
+      }
+
+      tr.selected {
+        background: #edf1ff;
+      }
+
+      .status {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .status.pending {
+        color: var(--warn);
+      }
+      .status.processing {
+        color: #326fd1;
+      }
+      .status.done {
+        color: var(--ok);
+      }
+      .status.failed {
+        color: var(--error);
+      }
+
+      .cards {
+        display: grid;
+        gap: 10px;
+        max-height: 420px;
+        overflow: auto;
+      }
+
+      .card-item {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        background: #fcfdff;
+      }
+
+      .chip {
+        display: inline-block;
+        border-radius: 999px;
+        border: 1px solid #cfd6ea;
+        padding: 2px 8px;
+        font-size: 11px;
+        color: #3f4860;
+        margin-right: 6px;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      @media (min-width: 900px) {
+        .panels {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <header class="header">
+        <div>
+          <h1 class="title">Recall Data Dashboard</h1>
+          <p class="subtitle">See generated sources, statuses, and cards.</p>
+        </div>
+        <button class="button" id="refreshBtn" type="button">Refresh</button>
+      </header>
+
+      <div class="panels">
+        <section class="panel">
+          <h2>Sources</h2>
+          <p class="muted" id="sourceSummary">Loading sources...</p>
+          <div class="sources">
+            <table>
+              <thead>
+                <tr>
+                  <th>Topic</th>
+                  <th>Status</th>
+                  <th>Cards</th>
+                  <th>Created</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="sourcesBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Cards</h2>
+          <p class="muted" id="cardsSummary">Pick a source to view cards.</p>
+          <div class="cards" id="cardsContainer"></div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      const sourcesBody = document.getElementById("sourcesBody");
+      const cardsContainer = document.getElementById("cardsContainer");
+      const sourceSummary = document.getElementById("sourceSummary");
+      const cardsSummary = document.getElementById("cardsSummary");
+      const refreshBtn = document.getElementById("refreshBtn");
+
+      const url = new URL(window.location.href);
+      const tokenFromUrl = url.searchParams.get("token");
+
+      if (tokenFromUrl) {
+        sessionStorage.setItem("recallDashboardToken", tokenFromUrl);
+        url.searchParams.delete("token");
+        window.history.replaceState({}, "", url.pathname + url.search);
+      }
+
+      const dashboardToken = sessionStorage.getItem("recallDashboardToken");
+      const DASHBOARD_SYNC_EVENT = "RECALL_SYNC_WIDGET_CARDS";
+
+      let selectedSourceId = "";
+      let cachedSources = [];
+
+      async function api(path, options = {}) {
+        const headers = {
+          ...(options.headers || {}),
+        };
+
+        if (dashboardToken) {
+          headers.Authorization = `Bearer ${dashboardToken}`;
+        }
+
+        const response = await fetch(path, {
+          ...options,
+          headers,
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || "Request failed");
+        }
+        return data;
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function formatDate(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return "-";
+        }
+        return date.toLocaleString();
+      }
+
+      function syncCardsToExtensionStorage(cards) {
+        if (!Array.isArray(cards)) {
+          return;
+        }
+
+        window.postMessage(
+          {
+            type: DASHBOARD_SYNC_EVENT,
+            cards,
+          },
+          window.location.origin,
+        );
+      }
+
+      function renderSources(sources) {
+        cachedSources = sources;
+        sourceSummary.textContent = `${sources.length} source(s) found`;
+
+        if (sources.length === 0) {
+          sourcesBody.innerHTML =
+            '<tr><td colspan="5" class="muted">No sources yet.</td></tr>';
+          cardsContainer.innerHTML = "";
+          cardsSummary.textContent = "No cards to show.";
+          return;
+        }
+
+        sourcesBody.innerHTML = sources
+          .map((source) => {
+            const isSelected =
+              source._id === selectedSourceId ? "selected" : "";
+            return `
+              <tr data-source-id="${source._id}" class="${isSelected}">
+                <td>${escapeHtml(source.topic)}</td>
+                <td><span class="status ${escapeHtml(source.status)}">${escapeHtml(source.status)}</span></td>
+                <td>${source.cardCount}</td>
+                <td>${escapeHtml(formatDate(source.createdAt))}</td>
+                <td>
+                  <button type="button" class="button button-small button-danger" data-delete-source-id="${source._id}">Delete Topic</button>
+                </td>
+              </tr>
+            `;
+          })
+          .join("");
+
+        sourcesBody.querySelectorAll("tr[data-source-id]").forEach((row) => {
+          row.addEventListener("click", (event) => {
+            if (event.target.closest("[data-delete-source-id]")) {
+              return;
+            }
+            selectedSourceId = row.getAttribute("data-source-id") || "";
+            renderSources(cachedSources);
+            loadCardsForSelectedSource();
+          });
+        });
+
+        sourcesBody
+          .querySelectorAll("[data-delete-source-id]")
+          .forEach((button) => {
+            button.addEventListener("click", async (event) => {
+              event.stopPropagation();
+              const sourceId = button.getAttribute("data-delete-source-id");
+              if (!sourceId) {
+                return;
+              }
+
+              const confirmed = window.confirm(
+                "Delete this topic and all its cards?",
+              );
+              if (!confirmed) {
+                return;
+              }
+
+              try {
+                await api(`/api/sources/${sourceId}`, { method: "DELETE" });
+                if (selectedSourceId === sourceId) {
+                  selectedSourceId = "";
+                }
+                await loadSources();
+              } catch (error) {
+                sourceSummary.textContent =
+                  error.message || "Failed to delete topic";
+              }
+            });
+          });
+      }
+
+      async function loadSources() {
+        sourceSummary.textContent = "Loading sources...";
+        const { sources } = await api("/api/sources");
+
+        if (!selectedSourceId && Array.isArray(sources) && sources.length > 0) {
+          selectedSourceId = sources[0]._id;
+        }
+
+        renderSources(Array.isArray(sources) ? sources : []);
+
+        if (selectedSourceId) {
+          await loadCardsForSelectedSource();
+        }
+      }
+
+      function renderCards(cards) {
+        cardsSummary.textContent = `${cards.length} card(s)`;
+        syncCardsToExtensionStorage(cards);
+
+        if (cards.length === 0) {
+          cardsContainer.innerHTML =
+            '<div class="muted">No cards for this source yet.</div>';
+          return;
+        }
+
+        cardsContainer.innerHTML = cards
+          .map((card) => {
+            const questionOrContent = card.question || card.content || "-";
+            const answer = card.correct || card.answer || "";
+            const options = Array.isArray(card.options) ? card.options : [];
+            return `
+              <article class="card-item" data-card-id="${card._id}">
+                <div>
+                  <span class="chip">${escapeHtml(card.type)}</span>
+                  <span class="chip">Difficulty ${escapeHtml(card.difficulty)}</span>
+                  <button type="button" class="button button-small button-danger" data-delete-card-id="${card._id}">Delete Card</button>
+                </div>
+                <p><strong>${escapeHtml(questionOrContent)}</strong></p>
+                ${options.length ? `<p class="muted">Options: ${escapeHtml(options.join(" | "))}</p>` : ""}
+                ${answer ? `<p class="muted">Answer: ${escapeHtml(answer)}</p>` : ""}
+              </article>
+            `;
+          })
+          .join("");
+
+        cardsContainer
+          .querySelectorAll("[data-delete-card-id]")
+          .forEach((button) => {
+            button.addEventListener("click", async () => {
+              const cardId = button.getAttribute("data-delete-card-id");
+              if (!cardId) {
+                return;
+              }
+
+              const confirmed = window.confirm("Delete this card?");
+              if (!confirmed) {
+                return;
+              }
+
+              try {
+                await api(`/api/cards/${cardId}`, { method: "DELETE" });
+                await loadSources();
+              } catch (error) {
+                cardsSummary.textContent =
+                  error.message || "Failed to delete card";
+              }
+            });
+          });
+      }
+
+      async function loadCardsForSelectedSource() {
+        if (!selectedSourceId) {
+          cardsSummary.textContent = "Pick a source to view cards.";
+          cardsContainer.innerHTML = "";
+          return;
+        }
+
+        cardsSummary.textContent = "Loading cards...";
+        const { cards } = await api(`/api/sources/${selectedSourceId}/cards`);
+        renderCards(Array.isArray(cards) ? cards : []);
+      }
+
+      async function init() {
+        try {
+          if (!dashboardToken) {
+            sourceSummary.textContent =
+              "Missing auth token. Open dashboard from the extension.";
+            cardsSummary.textContent = "";
+            return;
+          }
+
+          await loadSources();
+        } catch (error) {
+          sourceSummary.textContent = error.message || "Failed to load sources";
+          cardsSummary.textContent = "";
+        }
+      }
+
+      refreshBtn.addEventListener("click", init);
+      init();
+    </script>
+  </body>
+</html>
