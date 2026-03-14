@@ -944,9 +944,27 @@ async function bootstrapFromStoredCards() {
   const hasGeneratedCards = Array.isArray(recallCards) && recallCards.length > 0;
   const isCalibrated = Boolean(recallCalibrationCompleted);
 
+  // Migrate cards that are missing topic or sourceId annotation
+  let cardsToSync = recallCards;
+  if (hasGeneratedCards) {
+    const storedTopic = await getFromIndexedDB("recallTopic");
+    const storedSourceId = await getFromIndexedDB("recallLastSourceId");
+    const needsMigration = recallCards.some(
+      (c) => !c.topic || !c.sourceId
+    );
+    if (needsMigration && storedTopic) {
+      cardsToSync = recallCards.map((c) => ({
+        ...c,
+        topic: c.topic || storedTopic,
+        sourceId: c.sourceId || String(storedSourceId || ""),
+      }));
+      await saveToIndexedDB("recallCards", cardsToSync);
+    }
+  }
+
   // Sync existing cards to chrome.storage.local for widget access
   if (hasGeneratedCards) {
-    await saveWidgetCards(recallCards);
+    await saveWidgetCards(cardsToSync);
   }
 
   // Check if there are uncalibrated cards
