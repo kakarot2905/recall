@@ -9,7 +9,105 @@
   const IDLE_CHECK_MS = 500;
   const DASHBOARD_SYNC_EVENT = "RECALL_SYNC_WIDGET_CARDS";
 
+  function hashTopicColor(topic) {
+    let hash = 5381;
+    const value = String(topic || "");
+
+    for (let index = 0; index < value.length; index += 1) {
+      hash = ((hash << 5) + hash) + value.charCodeAt(index);
+    }
+
+    const hue = Math.abs(hash) % 361;
+    return `hsl(${hue}, 55%, 68%)`;
+  }
+
+  function getTimeOfDay() {
+    const hour = new Date().getHours();
+
+    if (hour <= 8) {
+      return "early";
+    }
+
+    if (hour >= 22) {
+      return "late";
+    }
+
+    return "day";
+  }
+
+  function getDaysUntilExam(examDate) {
+    if (!examDate) {
+      return null;
+    }
+
+    const examTimestamp = new Date(examDate).getTime();
+    if (Number.isNaN(examTimestamp)) {
+      return null;
+    }
+
+    return Math.ceil((examTimestamp - Date.now()) / 86400000);
+  }
+
+  function loadSM2StateLocal() {
+    return new Promise((resolve) => {
+      if (!isChromeStorageAvailable()) {
+        resolve({});
+        return;
+      }
+
+      safeStorageGet(["recallSM2State"], {}, (result) => {
+        resolve(result.recallSM2State || {});
+      });
+    });
+  }
+
+  function getTodayAnsweredCount() {
+    return new Promise((resolve) => {
+      if (!isChromeStorageAvailable()) {
+        resolve(0);
+        return;
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+      safeStorageGet(["recallTodayStats"], {}, (result) => {
+        const stats = result.recallTodayStats;
+        if (!stats || stats.date !== today) {
+          resolve(0);
+          return;
+        }
+
+        resolve(Number(stats.count) || 0);
+      });
+    });
+  }
+
+  function incrementTodayAnsweredCount() {
+    return new Promise((resolve) => {
+      if (!isChromeStorageAvailable()) {
+        resolve();
+        return;
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+      safeStorageGet(["recallTodayStats"], {}, (result) => {
+        const stats = result.recallTodayStats;
+        const nextCount = stats && stats.date === today ? (Number(stats.count) || 0) + 1 : 1;
+
+        safeStorageSet({
+          recallTodayStats: {
+            date: today,
+            count: nextCount,
+          },
+        }, () => {
+          resolve();
+        });
+      });
+    });
+  }
+
   let cards = [];
+  let allCardsForLogging = [];
+  let sm2State = {}; // SM-2 state map keyed by cardId
   let index = 0;
   let idleTimerId = null;
   let idleTriggered = false;
@@ -19,13 +117,656 @@
   let currentCardInteracted = false;
   let isDndMode = false;
   let isDndPreview = false;
+  let hasInvalidatedContext = false;
+  let storageChangeListener = null;
+  let pendingWrongAnswer = false;
+  let firstCorrectFiredThisSession = false;
+  let sessionGiveUpCount = 0;
+  let sessionGiveUpHourTriggered = false;
+  let lastIdleTriggerAt = null;
+  let lastAnswerWasCorrect = false;
+
+  // SM-2 helpers (client-side, no network)
+
+  function widgetSM2GetNextInterval(repetitions, easeFactor, prevInterval, quality) {
+    if (quality < 3) return 600000;
+    switch (repetitions) {
+      case 0: return 600000;
+      case 1: return 3600000;
+      case 2: return 28800000;
+      case 3: return 86400000;
+      default: return Math.round(prevInterval * easeFactor);
+    }
+  }
+
+  function widgetSM2Calculate(cardState, quality) {
+    let { easeFactor, repetitions, interval, stability } = cardState;
+    const reviewedAt = new Date().toISOString();
+    const qualityHistory = Array.isArray(cardState.qualityHistory)
+      ? cardState.qualityHistory.slice(-9)
+      : [];
+
+    if (quality >= 3) {
+      interval = widgetSM2GetNextInterval(repetitions, easeFactor, interval, quality);
+      repetitions += 1;
+      stability = stability * (1 + 0.5 * quality / 5);
+    } else {
+      repetitions = 0;
+      interval = 600000;
+      stability = Math.max(1, stability * 0.5);
+    }
+
+    easeFactor = Math.max(
+      1.3,
+      easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+    );
+
+    return {
+      easeFactor,
+      repetitions,
+      interval,
+      stability,
+      lastQuality: quality,
+      qualityHistory: [
+        ...qualityHistory,
+        {
+          quality,
+          reviewedAt,
+        },
+      ],
+      nextReview: new Date(Date.now() + interval).toISOString(),
+      lastReviewed: reviewedAt,
+    };
+  }
+
+  function widgetSM2Default() {
+    return {
+      easeFactor: 2.5,
+      repetitions: 0,
+      interval: 600000,
+      stability: 1,
+      nextReview: new Date().toISOString(),
+      lastReviewed: null,
+    };
+  }
+
+  function widgetGetDueCards(cards, sm2State) {
+    const now = Date.now();
+    return cards.filter((card) => {
+      const state = sm2State[card._id];
+      // No SM-2 state yet means card is due immediately
+      if (!state || !state.nextReview) return true;
+      return new Date(state.nextReview).getTime() <= now;
+    });
+  }
+
+  function moveCardToFront(cardsList, predicate) {
+    const foundCard = cardsList.find(predicate);
+    if (!foundCard) {
+      return cardsList.slice();
+    }
+
+    return [foundCard, ...cardsList.filter((card) => card !== foundCard)];
+  }
+
+  async function getCardsForCurrentContext(allCards) {
+    const safeCards = Array.isArray(allCards)
+      ? allCards.filter((card) => card && (card.question || card.content))
+      : [];
+
+    if (!safeCards.length) {
+      return [];
+    }
+
+    const now = new Date();
+    const hour = now.getHours();
+
+    if (sessionGiveUpCount >= 3 && (hour === 23 || hour === 0) && !sessionGiveUpHourTriggered) {
+      sessionGiveUpHourTriggered = true;
+      return safeCards.filter((card) => card.type === "fact");
+    }
+
+    const contextData = await new Promise((resolve) => {
+      safeStorageGet(["recallLastOpenedAt", "recallSM2State"], {}, (result) => {
+        resolve({
+          lastOpenedAt: result.recallLastOpenedAt,
+          sm2StateMap: result.recallSM2State || sm2State || {},
+        });
+      });
+    });
+
+    const lastOpenedAt = Number(contextData.lastOpenedAt) || 0;
+    if (lastOpenedAt && (Date.now() - lastOpenedAt > 4 * 86400000)) {
+      return moveCardToFront(safeCards, (card) => card.type === "fact");
+    }
+
+    if (hour < 9) {
+      return safeCards.slice().sort((leftCard, rightCard) => {
+        const leftDifficulty = Number(leftCard.difficulty) || 0;
+        const rightDifficulty = Number(rightCard.difficulty) || 0;
+
+        const leftRank = leftDifficulty >= 4 ? 2 : (leftDifficulty >= 2 ? 0 : 1);
+        const rightRank = rightDifficulty >= 4 ? 2 : (rightDifficulty >= 2 ? 0 : 1);
+
+        if (leftRank !== rightRank) {
+          return leftRank - rightRank;
+        }
+
+        return leftDifficulty - rightDifficulty;
+      });
+    }
+
+    if (now.getDay() === 0) {
+      const sevenDaysAgo = Date.now() - (7 * 86400000);
+      const lowRecentQualityCardIds = new Set(
+        Object.entries(contextData.sm2StateMap || {})
+          .filter(([, state]) => Array.isArray(state?.qualityHistory) && state.qualityHistory.some((entry) => {
+            const reviewedAt = new Date(entry?.reviewedAt || 0).getTime();
+            return reviewedAt >= sevenDaysAgo && Number(entry?.quality) <= 3;
+          }))
+          .map(([cardId]) => cardId)
+      );
+
+      return safeCards.slice().sort((leftCard, rightCard) => {
+        const leftPriority = lowRecentQualityCardIds.has(leftCard._id) ? 0 : 1;
+        const rightPriority = lowRecentQualityCardIds.has(rightCard._id) ? 0 : 1;
+        return leftPriority - rightPriority;
+      });
+    }
+
+    return safeCards;
+  }
+
+  function widgetSubmitReview(cardId, quality, sourceId) {
+    if (!isChromeStorageAvailable()) return;
+
+    safeStorageGet(["recallSM2State", "recallLastReviewedAt"], {}, (result) => {
+      const sm2State = result.recallSM2State || {};
+      const lastReviewedAt = result.recallLastReviewedAt || {};
+      const existing = sm2State[cardId] || widgetSM2Default();
+      sm2State[cardId] = widgetSM2Calculate(existing, quality);
+      if (sourceId) {
+        sm2State[cardId].sourceId = sourceId;
+      }
+
+      const storagePayload = { recallSM2State: sm2State };
+      if (sourceId) {
+        storagePayload.recallLastSourceId = sourceId;
+        storagePayload.recallLastReviewedAt = {
+          ...lastReviewedAt,
+          [sourceId]: Date.now(),
+        };
+      }
+
+      safeStorageSet(storagePayload, (didSave) => {
+        if (!didSave) {
+          console.error("[Recall Widget] Failed to save SM-2 state");
+          return;
+        }
+        console.log(`[Recall Widget] SM-2 updated for card ${cardId}, quality ${quality}, nextReview: ${sm2State[cardId].nextReview}`);
+        logAllCardIntervals(allCardsForLogging, sm2State);
+      });
+    });
+  }
+
+  function logAllCardIntervals(cardsList, sm2StateMap) {
+    const safeCards = Array.isArray(cardsList)
+      ? cardsList.filter((card) => card && (card.question || card.content))
+      : [];
+
+    if (!safeCards.length) {
+      console.log("[Recall Widget] No cards available for interval logging.");
+      return;
+    }
+
+    const now = Date.now();
+    const rows = safeCards.map((card, idx) => {
+      const cardId = card._id || `unknown-${idx}`;
+      const state = (sm2StateMap && sm2StateMap[cardId]) || null;
+      const intervalMs = Number(state?.interval) || 0;
+      const nextReviewAt = state?.nextReview || null;
+      const msUntilReview = nextReviewAt ? (new Date(nextReviewAt).getTime() - now) : null;
+      return {
+        cardId,
+        hasSm2State: Boolean(state),
+        intervalMs,
+        intervalMinutes: Math.round(intervalMs / 60000),
+        nextReview: nextReviewAt,
+        minutesUntilReview: msUntilReview == null ? null : Math.round(msUntilReview / 60000),
+      };
+    });
+
+    console.table(rows);
+  }
 
   function normalizeAnswer(text) {
     return text.toLowerCase().trim();
   }
 
+  function lerpColor(from, to, t) {
+    const normalizedT = Math.min(Math.max(t, 0), 1);
+    const parseHex = (hex) => {
+      const sanitized = hex.replace("#", "");
+      const normalizedHex = sanitized.length === 3
+        ? sanitized.split("").map((char) => char + char).join("")
+        : sanitized;
+
+      return {
+        r: parseInt(normalizedHex.slice(0, 2), 16),
+        g: parseInt(normalizedHex.slice(2, 4), 16),
+        b: parseInt(normalizedHex.slice(4, 6), 16),
+      };
+    };
+
+    const fromRgb = parseHex(from);
+    const toRgb = parseHex(to);
+    const r = Math.round(fromRgb.r + ((toRgb.r - fromRgb.r) * normalizedT));
+    const g = Math.round(fromRgb.g + ((toRgb.g - fromRgb.g) * normalizedT));
+    const b = Math.round(fromRgb.b + ((toRgb.b - fromRgb.b) * normalizedT));
+
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
+  function fireParticleBurst(widget) {
+    if (!widget) {
+      return;
+    }
+
+    const burstLayer = document.createElement("div");
+    burstLayer.style.position = "absolute";
+    burstLayer.style.inset = "0";
+    burstLayer.style.pointerEvents = "none";
+    burstLayer.style.overflow = "visible";
+    burstLayer.style.zIndex = "2";
+
+    const originX = widget.offsetWidth / 2;
+    const originY = 26;
+
+    for (let index = 0; index < 7; index += 1) {
+      const particle = document.createElement("div");
+      const angle = (Math.PI * 2 * index) / 7;
+      const distance = 30 + (index % 3) * 10;
+
+      particle.style.position = "absolute";
+      particle.style.left = `${originX}px`;
+      particle.style.top = `${originY}px`;
+      particle.style.width = "6px";
+      particle.style.height = "6px";
+      particle.style.marginLeft = "-3px";
+      particle.style.marginTop = "-3px";
+      particle.style.borderRadius = "50%";
+      particle.style.background = "#C5BAFF";
+      particle.style.opacity = "1";
+
+      burstLayer.appendChild(particle);
+      particle.animate([
+        { transform: "translate(0, 0) scale(1)", opacity: 1 },
+        {
+          transform: `translate(${Math.cos(angle) * distance}px, ${Math.sin(angle) * distance}px) scale(0.5)`,
+          opacity: 0,
+        },
+      ], {
+        duration: 400,
+        easing: "ease-out",
+        fill: "forwards",
+      });
+    }
+
+    widget.appendChild(burstLayer);
+    window.setTimeout(() => {
+      burstLayer.remove();
+    }, 420);
+  }
+
+  function maybeFireFirstCorrectBurst(widget) {
+    if (firstCorrectFiredThisSession) {
+      return;
+    }
+
+    firstCorrectFiredThisSession = true;
+    fireParticleBurst(widget);
+  }
+
+  async function injectGhostCardIfNeeded(cardsList, sourceId) {
+    const safeCards = Array.isArray(cardsList) ? cardsList.slice() : [];
+    if (!sourceId) {
+      return safeCards;
+    }
+
+    const storageState = await new Promise((resolve) => {
+      safeStorageGet(["recallExamDate", "ghostCardShown", "recallSM2State"], {}, (result) => {
+        resolve(result || {});
+      });
+    });
+
+    const daysUntil = getDaysUntilExam(storageState.recallExamDate || null);
+    if (daysUntil !== 1) {
+      return safeCards;
+    }
+
+    const ghostCardShown = storageState.ghostCardShown || {};
+    if (ghostCardShown[sourceId]) {
+      return safeCards;
+    }
+
+    const sourceCardsCount = Object.values(storageState.recallSM2State || {}).filter((state) => state?.sourceId === sourceId).length
+      || safeCards.filter((card) => card?.sourceId === sourceId).length;
+
+    const ghostCard = {
+      type: "ghost",
+      content: `You've reviewed ${sourceCardsCount} cards for this. You're ready.`,
+      _id: `ghost-eve-${sourceId}`,
+      sourceId,
+    };
+
+    safeStorageSet({
+      ghostCardShown: {
+        ...ghostCardShown,
+        [sourceId]: true,
+      },
+    });
+
+    return [ghostCard, ...safeCards];
+  }
+
+  function triggerDndSilencePulseOnce() {
+    const dot = document.getElementById(WIDGET_DOT_ID);
+    if (!dot || typeof dot.animate !== "function") {
+      return;
+    }
+
+    dot.animate([
+      { transform: "scale(1)" },
+      { transform: "scale(1.3)", offset: 0.5 },
+      { transform: "scale(1)" },
+    ], {
+      duration: 600,
+      easing: "ease-in-out",
+      iterations: 1,
+      fill: "none",
+    });
+  }
+
+  async function getEntryAnimation() {
+    const today = new Date().toISOString().slice(0, 10);
+    const lastShownDate = await new Promise((resolve) => {
+      safeStorageGet(["recallLastShownDate"], {}, (result) => {
+        resolve(result.recallLastShownDate || null);
+      });
+    });
+
+    if (lastShownDate !== today) {
+      safeStorageSet({ recallLastShownDate: today });
+      return {
+        keyframe: "@keyframes recallWidgetEntryFade { 0% { opacity: 0; } 100% { opacity: 1; } }",
+        style: {
+          animation: "recallWidgetEntryFade 400ms ease 1",
+        },
+      };
+    }
+
+    if (lastIdleTriggerAt && (Date.now() - lastIdleTriggerAt > 30 * 60000)) {
+      return {
+        keyframe: "@keyframes recallWidgetEntryDrop { 0% { transform: translateY(-12px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }",
+        style: {
+          animation: "recallWidgetEntryDrop 350ms ease-out 1",
+        },
+      };
+    }
+
+    if (lastAnswerWasCorrect) {
+      lastAnswerWasCorrect = false;
+      return {
+        keyframe: "@keyframes recallWidgetEntryBounce { 0% { transform: translateY(-4px); } 100% { transform: translateY(0); } }",
+        style: {
+          animation: "recallWidgetEntryBounce 300ms cubic-bezier(0.34,1.56,0.64,1) 1",
+        },
+      };
+    }
+
+    return {
+      keyframe: "@keyframes recallWidgetEntrySlide { 0% { transform: translateX(12px); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }",
+      style: {
+        animation: "recallWidgetEntrySlide 250ms ease 1",
+      },
+    };
+  }
+
+  function getReviewQualityHistory(cardId) {
+    const state = cardId ? sm2State[cardId] : null;
+    if (!state) {
+      return [];
+    }
+
+    if (Array.isArray(state.qualityHistory) && state.qualityHistory.length) {
+      return state.qualityHistory;
+    }
+
+    return state.lastQuality == null ? [] : [{ quality: state.lastQuality }];
+  }
+
+  function applySeenBeforeHint(promptElement, cardId) {
+    const state = cardId ? sm2State[cardId] : null;
+    const qualityHistory = getReviewQualityHistory(cardId);
+    const hasConfidentHistory = Number(state?.repetitions) >= 3
+      && qualityHistory.length > 0
+      && qualityHistory.every((entry) => Number(entry?.quality) >= 4);
+
+    promptElement.style.fontWeight = hasConfidentHistory ? "450" : "400";
+  }
+
+  function getRecallUserFirstName(user) {
+    if (!user) {
+      return "there";
+    }
+
+    if (typeof user.firstName === "string" && user.firstName.trim()) {
+      return user.firstName.trim();
+    }
+
+    if (typeof user.name === "string" && user.name.trim()) {
+      return user.name.trim().split(/\s+/)[0];
+    }
+
+    if (typeof user.email === "string" && user.email.includes("@")) {
+      return user.email.split("@")[0];
+    }
+
+    return "there";
+  }
+
+  function decoratePromptAndWidget(promptElement, baseText, card, currentIndex, widget) {
+    if (!promptElement || !widget || !card) {
+      return;
+    }
+
+    applySeenBeforeHint(promptElement, card._id);
+
+    safeStorageGet(["recallUser", "seenFirstCardPerSource", "recallTopicColors"], {}, (result) => {
+      if (!promptElement.isConnected) {
+        return;
+      }
+
+      const topicColors = result.recallTopicColors || {};
+      const topicName = card.topic || card.sourceName || card.sourceId || "this topic";
+      const topicColor = topicColors[card.sourceId]
+        || topicColors[topicName]
+        || hashTopicColor(card.topic || card.sourceId || topicName);
+
+      widget.style.borderLeft = `3px solid ${topicColor}`;
+
+      const seenFirstCardPerSource = result.seenFirstCardPerSource || {};
+      const sourceId = card.sourceId;
+      const isNewSourceIntro = Boolean(sourceId) && currentIndex === 0 && !seenFirstCardPerSource[sourceId];
+
+      if (isNewSourceIntro) {
+        const firstName = getRecallUserFirstName(result.recallUser);
+        promptElement.textContent = `Let's see what you know about ${topicName}, ${firstName}. ${baseText}`;
+
+        safeStorageSet({
+          seenFirstCardPerSource: {
+            ...seenFirstCardPerSource,
+            [sourceId]: true,
+          },
+        });
+        return;
+      }
+
+      promptElement.textContent = baseText;
+    });
+  }
+
+  function animateAdvanceToNextCard(widget, cardId, wasCorrect) {
+    const body = widget?.querySelector(`#${WIDGET_ID}-body`);
+    const speed = parseFloat(widget?.style.getPropertyValue("--recall-anim-speed") || "1") || 1;
+    const durationMs = Math.round(300 * speed);
+    const repetitions = Number(cardId ? sm2State[cardId]?.repetitions : 0);
+    const nextRepetitions = wasCorrect ? repetitions + 1 : repetitions;
+    const useMasteredExit = wasCorrect && nextRepetitions >= 5;
+
+    const advance = () => {
+      if (body) {
+        body.style.transition = "";
+        body.style.transform = "";
+        body.style.opacity = "";
+      }
+
+      index = (index + 1) % cards.length;
+      cardState = {};
+      currentCardInteracted = false;
+      pendingWrongAnswer = false;
+      renderCurrentCard();
+    };
+
+    if (!body || !cards.length) {
+      advance();
+      return;
+    }
+
+    body.style.transition = useMasteredExit
+      ? `transform ${0.3 * speed}s ease-in, opacity ${0.3 * speed}s ease-in`
+      : `transform ${0.3 * speed}s ease-in, opacity ${0.3 * speed}s`;
+    body.style.transform = useMasteredExit ? "scale(0)" : "translateX(60px)";
+    body.style.opacity = "0";
+
+    window.setTimeout(advance, durationMs);
+  }
+
+  function isContextInvalidationError(error) {
+    return Boolean(
+      error
+      && typeof error.message === "string"
+      && error.message.includes("Extension context invalidated")
+    );
+  }
+
+  function handleExtensionContextInvalidated(error) {
+    if (hasInvalidatedContext) {
+      return;
+    }
+
+    hasInvalidatedContext = true;
+    if (idleTimerId) {
+      clearInterval(idleTimerId);
+      idleTimerId = null;
+    }
+
+    console.warn("[Recall Widget] Extension context invalidated. Widget automation disabled until the page reloads.", error);
+  }
+
+  function isExtensionContextValid() {
+    if (hasInvalidatedContext) {
+      return false;
+    }
+
+    try {
+      return Boolean(
+        typeof chrome !== "undefined"
+        && chrome.runtime
+        && chrome.runtime.id
+        && chrome.storage
+        && chrome.storage.local
+      );
+    } catch (error) {
+      if (isContextInvalidationError(error)) {
+        handleExtensionContextInvalidated(error);
+      }
+      return false;
+    }
+  }
+
+  function getChromeRuntimeError() {
+    try {
+      if (typeof chrome === "undefined" || !chrome.runtime || !chrome.runtime.lastError) {
+        return null;
+      }
+
+      const error = new Error(chrome.runtime.lastError.message || "Chrome runtime error");
+      if (isContextInvalidationError(error)) {
+        handleExtensionContextInvalidated(error);
+      }
+
+      return error;
+    } catch (error) {
+      if (isContextInvalidationError(error)) {
+        handleExtensionContextInvalidated(error);
+      }
+      return error;
+    }
+  }
+
+  function safeStorageGet(keys, fallbackValue, callback) {
+    if (!isExtensionContextValid()) {
+      callback(fallbackValue);
+      return;
+    }
+
+    try {
+      chrome.storage.local.get(keys, (result) => {
+        const runtimeError = getChromeRuntimeError();
+        if (runtimeError) {
+          callback(fallbackValue);
+          return;
+        }
+
+        callback(result || fallbackValue);
+      });
+    } catch (error) {
+      if (isContextInvalidationError(error)) {
+        handleExtensionContextInvalidated(error);
+      }
+      callback(fallbackValue);
+    }
+  }
+
+  function safeStorageSet(items, callback) {
+    const onComplete = typeof callback === "function" ? callback : () => { };
+
+    if (!isExtensionContextValid()) {
+      onComplete(false);
+      return;
+    }
+
+    try {
+      chrome.storage.local.set(items, () => {
+        const runtimeError = getChromeRuntimeError();
+        if (runtimeError) {
+          onComplete(false);
+          return;
+        }
+
+        onComplete(true);
+      });
+    } catch (error) {
+      if (isContextInvalidationError(error)) {
+        handleExtensionContextInvalidated(error);
+      }
+      onComplete(false);
+    }
+  }
+
   function isChromeStorageAvailable() {
-    return Boolean(typeof chrome !== "undefined" && chrome.storage && chrome.storage.local);
+    return isExtensionContextValid();
   }
 
   function clampPosition(left, top, width, height) {
@@ -52,7 +793,7 @@
 
     const rect = wrapper.getBoundingClientRect();
     const clamped = clampPosition(rect.left, rect.top, wrapper.offsetWidth, wrapper.offsetHeight);
-    chrome.storage.local.set({
+    safeStorageSet({
       [POSITION_STORAGE_KEY]: {
         left: clamped.left,
         top: clamped.top,
@@ -65,11 +806,7 @@
       return;
     }
 
-    chrome.storage.local.get([POSITION_STORAGE_KEY], (result) => {
-      if (chrome.runtime.lastError) {
-        return;
-      }
-
+    safeStorageGet([POSITION_STORAGE_KEY], {}, (result) => {
       const saved = result[POSITION_STORAGE_KEY];
       if (!saved || typeof saved.left !== "number" || typeof saved.top !== "number") {
         return;
@@ -86,7 +823,7 @@
 
     const rect = dot.getBoundingClientRect();
     const clamped = clampPosition(rect.left, rect.top, dot.offsetWidth || 12, dot.offsetHeight || 12);
-    chrome.storage.local.set({
+    safeStorageSet({
       [DOT_POSITION_STORAGE_KEY]: {
         left: clamped.left,
         top: clamped.top,
@@ -120,8 +857,8 @@
       return;
     }
 
-    chrome.storage.local.get([DOT_POSITION_STORAGE_KEY, POSITION_STORAGE_KEY], (result) => {
-      if (chrome.runtime.lastError) {
+    safeStorageGet([DOT_POSITION_STORAGE_KEY, POSITION_STORAGE_KEY], {}, (result) => {
+      if (!isChromeStorageAvailable()) {
         syncDotPositionWithWidget();
         return;
       }
@@ -187,7 +924,7 @@
       return;
     }
 
-    chrome.storage.local.set({ [DND_MODE_STORAGE_KEY]: isDndMode });
+    safeStorageSet({ [DND_MODE_STORAGE_KEY]: isDndMode });
   }
 
   function applyDndModeUi() {
@@ -431,6 +1168,114 @@
     dndDot.style.cursor = "pointer";
     dndDot.style.touchAction = "none";
     dndDot.title = "Recall widget in DND mode";
+    dndDot.style.transition = "box-shadow 0.15s ease";
+
+    const DOT_EFFECTS_STYLE_ID = "recall-widget-dot-effects";
+    const DEFAULT_DOT_BACKGROUND = "#C5BAFF";
+    const DEFAULT_DOT_BREATHE_BACKGROUND = "#b09bff";
+    const DEFAULT_DOT_SHADOW = "0 0 0 2px #ffffff, 0 0 0 4px rgba(39, 201, 63, 0.28)";
+    let dotShadowOffsetX = 0;
+    let dotShadowOffsetY = 0;
+    let hasStreakPulse = false;
+
+    if (!document.getElementById(DOT_EFFECTS_STYLE_ID)) {
+      const dotEffectsStyle = document.createElement("style");
+      dotEffectsStyle.id = DOT_EFFECTS_STYLE_ID;
+      dotEffectsStyle.textContent = "@keyframes recallBreathe { 0%,100% { transform:scale(1); background-color:var(--recall-dot-base-color); } 50% { transform:scale(1.26); background-color:var(--recall-dot-breathe-color); } } @keyframes recallStreakPulse { 0%,100% { box-shadow: var(--recall-dot-shadow-base), 0 0 0 2px rgba(255,200,60,0.25), 0 0 0 0 rgba(255,200,60,0.35); } 50% { box-shadow: var(--recall-dot-shadow-base), 0 0 0 2px rgba(255,200,60,0.18), 0 0 0 8px rgba(255,200,60,0); } }";
+      (document.head || document.documentElement).appendChild(dotEffectsStyle);
+    }
+
+    const setDotBreathingColors = (baseColor, breatheColor) => {
+      dndDot.style.setProperty("--recall-dot-base-color", baseColor);
+      dndDot.style.setProperty("--recall-dot-breathe-color", breatheColor);
+      dndDot.style.background = baseColor;
+    };
+
+    const buildDotShadow = (offsetX = 0, offsetY = 0) => {
+      const roundedOffsetX = Math.round(offsetX * 100) / 100;
+      const roundedOffsetY = Math.round(offsetY * 100) / 100;
+      return `${roundedOffsetX}px ${roundedOffsetY}px 0 2px #ffffff, ${roundedOffsetX}px ${roundedOffsetY}px 0 4px rgba(39, 201, 63, 0.28)`;
+    };
+
+    const applyDotAnimationAndShadow = () => {
+      const baseShadow = buildDotShadow(dotShadowOffsetX, dotShadowOffsetY);
+      dndDot.style.setProperty("--recall-dot-shadow-base", baseShadow);
+      dndDot.style.boxShadow = hasStreakPulse
+        ? `${baseShadow}, 0 0 0 2px rgba(255,200,60,0.25)`
+        : baseShadow;
+      dndDot.style.animation = hasStreakPulse
+        ? "recallBreathe 3s ease-in-out infinite, recallStreakPulse 2.5s ease-in-out infinite"
+        : "recallBreathe 3s ease-in-out infinite";
+    };
+
+    const updateDotOpacityByTime = () => {
+      const timeOfDay = getTimeOfDay();
+      dndDot.style.opacity = timeOfDay === "early" || timeOfDay === "late" ? "0.6" : "1";
+    };
+
+    const updateDotExamCountdownColor = () => {
+      safeStorageGet(["recallExamDate"], {}, (result) => {
+        const daysUntilExam = getDaysUntilExam(result.recallExamDate || null);
+
+        if (daysUntilExam !== null && daysUntilExam <= 2) {
+          setDotBreathingColors("rgba(220,80,80,0.85)", "rgba(235,110,110,0.98)");
+          return;
+        }
+
+        if (daysUntilExam !== null && daysUntilExam <= 7) {
+          setDotBreathingColors("#F4A4A4", "#f08d8d");
+          return;
+        }
+
+        if (daysUntilExam !== null && daysUntilExam <= 14) {
+          setDotBreathingColors("#FAC775", "#ffb84f");
+          return;
+        }
+
+        setDotBreathingColors(DEFAULT_DOT_BACKGROUND, DEFAULT_DOT_BREATHE_BACKGROUND);
+      });
+    };
+
+    const updateDotStreakPulse = () => {
+      getTodayAnsweredCount().then((count) => {
+        hasStreakPulse = count >= 3;
+        applyDotAnimationAndShadow();
+      });
+    };
+
+    const onDocumentMouseMove = (event) => {
+      const rect = dndDot.getBoundingClientRect();
+      const dotCenterX = rect.left + (rect.width / 2);
+      const dotCenterY = rect.top + (rect.height / 2);
+      const deltaX = event.clientX - dotCenterX;
+      const deltaY = event.clientY - dotCenterY;
+      const distance = Math.hypot(deltaX, deltaY);
+
+      if (distance < 80) {
+        const angle = Math.atan2(deltaY, deltaX);
+        const offsetMagnitude = ((80 - distance) / 80) * 5;
+        dotShadowOffsetX = Math.cos(angle) * offsetMagnitude;
+        dotShadowOffsetY = Math.sin(angle) * offsetMagnitude;
+      } else if (dotShadowOffsetX !== 0 || dotShadowOffsetY !== 0) {
+        dotShadowOffsetX = 0;
+        dotShadowOffsetY = 0;
+      } else {
+        return;
+      }
+
+      applyDotAnimationAndShadow();
+    };
+
+    dndDot.style.setProperty("--recall-dot-shadow-base", DEFAULT_DOT_SHADOW);
+    setDotBreathingColors(DEFAULT_DOT_BACKGROUND, DEFAULT_DOT_BREATHE_BACKGROUND);
+    applyDotAnimationAndShadow();
+    updateDotOpacityByTime();
+    updateDotExamCountdownColor();
+    updateDotStreakPulse();
+    window.setInterval(updateDotOpacityByTime, 60000);
+    window.setInterval(updateDotExamCountdownColor, 60000);
+    window.setInterval(updateDotStreakPulse, 60000);
+    document.addEventListener("mousemove", onDocumentMouseMove, { passive: true });
 
     let isDotDragging = false;
     let dotDragOffsetX = 0;
@@ -552,6 +1397,8 @@
   }
 
   function createOptionButton(text, isCorrect, isSelected, onClickCallback, isDisabled = false) {
+    const widget = document.getElementById(WIDGET_ID);
+    const speed = parseFloat(widget?.style.getPropertyValue("--recall-anim-speed") || "1") || 1;
     const btn = document.createElement("button");
     btn.textContent = text;
     btn.style.display = "block";
@@ -564,7 +1411,7 @@
     btn.style.color = "#333";
     btn.style.cursor = "pointer";
     btn.style.fontSize = "12px";
-    btn.style.transition = "all 0.3s";
+    btn.style.transition = `all ${0.3 * speed}s`;
     btn.style.fontFamily = "inherit";
 
     if (isSelected) {
@@ -593,6 +1440,8 @@
   }
 
   function createInputButton(text, variant = "primary") {
+    const widget = document.getElementById(WIDGET_ID);
+    const speed = parseFloat(widget?.style.getPropertyValue("--recall-anim-speed") || "1") || 1;
     const btn = document.createElement("button");
     btn.textContent = text;
     btn.style.padding = "6px 12px";
@@ -602,7 +1451,7 @@
     btn.style.cursor = "pointer";
     btn.style.fontSize = "12px";
     btn.style.fontFamily = "inherit";
-    btn.style.transition = "all 0.2s";
+    btn.style.transition = `all ${0.2 * speed}s`;
 
     if (variant === "primary") {
       btn.style.background = "#2196F3";
@@ -630,8 +1479,94 @@
       return;
     }
 
+    const CARD_EFFECTS_STYLE_ID = "recall-widget-card-effects";
+    if (!document.getElementById(CARD_EFFECTS_STYLE_ID)) {
+      const cardEffectsStyle = document.createElement("style");
+      cardEffectsStyle.id = CARD_EFFECTS_STYLE_ID;
+      cardEffectsStyle.textContent = "@keyframes recallCardBreathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.003)} } @keyframes recallSkeletonShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }";
+      (document.head || document.documentElement).appendChild(cardEffectsStyle);
+    }
+
     const body = widget.querySelector(`#${WIDGET_ID}-body`);
     const footer = widget.querySelector(`#${WIDGET_ID}-footer`);
+    if (!body || !footer) {
+      return;
+    }
+
+    if (!widget.style.getPropertyValue("--recall-anim-speed")) {
+      widget.style.setProperty("--recall-anim-speed", "1");
+    }
+
+    const applyBodyAnimation = () => {
+      const speed = parseFloat(widget.style.getPropertyValue("--recall-anim-speed") || "1") || 1;
+      body.style.animation = widget.matches(":hover")
+        ? "none"
+        : `recallCardBreathe ${3 * speed}s ease-in-out infinite`;
+    };
+
+    if (!widget.dataset.recallCardHoverBound) {
+      widget.addEventListener("mouseenter", () => {
+        const nextBody = widget.querySelector(`#${WIDGET_ID}-body`);
+        if (nextBody) {
+          nextBody.style.animation = "none";
+        }
+      });
+      widget.addEventListener("mouseleave", () => {
+        const nextBody = widget.querySelector(`#${WIDGET_ID}-body`);
+        if (!nextBody) {
+          return;
+        }
+
+        const speed = parseFloat(widget.style.getPropertyValue("--recall-anim-speed") || "1") || 1;
+        nextBody.style.animation = `recallCardBreathe ${3 * speed}s ease-in-out infinite`;
+      });
+      widget.dataset.recallCardHoverBound = "true";
+    }
+
+    safeStorageGet(["recallExamDate"], {}, (result) => {
+      const daysUntilExam = getDaysUntilExam(result.recallExamDate || null);
+      widget.style.setProperty("--recall-anim-speed", daysUntilExam !== null && daysUntilExam >= 1 && daysUntilExam <= 7 ? "1.18" : "1");
+      applyBodyAnimation();
+    });
+
+    const showSkeleton = () => {
+      const speed = parseFloat(widget.style.getPropertyValue("--recall-anim-speed") || "1") || 1;
+      const skeleton = document.createElement("div");
+      skeleton.id = `${WIDGET_ID}-skeleton`;
+      skeleton.style.display = "grid";
+      skeleton.style.gap = "8px";
+
+      const createSkeletonLine = (width) => {
+        const line = document.createElement("div");
+        line.style.width = width;
+        line.style.height = "12px";
+        line.style.borderRadius = "999px";
+        line.style.background = "linear-gradient(90deg, #eef2fb 25%, #f8faff 50%, #eef2fb 75%)";
+        line.style.backgroundSize = "200% 100%";
+        line.style.animation = `recallSkeletonShimmer ${1.35 * speed}s linear infinite`;
+        return line;
+      };
+
+      skeleton.appendChild(createSkeletonLine("100%"));
+      skeleton.appendChild(createSkeletonLine("72%"));
+
+      for (let index = 0; index < 4; index += 1) {
+        skeleton.appendChild(createSkeletonLine("80%"));
+      }
+
+      body.innerHTML = "";
+      body.appendChild(skeleton);
+    };
+
+    const hideSkeleton = () => {
+      const skeleton = body.querySelector(`#${WIDGET_ID}-skeleton`);
+      if (skeleton) {
+        skeleton.remove();
+      }
+    };
+
+    showSkeleton();
+    applyBodyAnimation();
 
     if (!cards.length) {
       widget.style.display = "none";
@@ -667,6 +1602,7 @@
     body.innerHTML = "";
 
     if (!card) {
+      hideSkeleton();
       body.textContent = "No card available.";
       footer.textContent = `${safeIndex + 1} / ${cards.length}`;
       return;
@@ -674,13 +1610,37 @@
 
     const cardKey = `${safeIndex}-${card.question || card.content}`;
     const state = cardState[cardKey] || { answered: false, correct: null, userAnswer: null };
+    if (pendingWrongAnswer && !state.answered) {
+      return;
+    }
 
     // Render based on card type
-    if (card.type === "mcq") {
+    if (card.type === "ghost") {
+      hideSkeleton();
+      footer.innerHTML = "";
+
+      const ghostDiv = document.createElement("div");
+      ghostDiv.textContent = card.content;
+      ghostDiv.style.padding = "18px 16px";
+      ghostDiv.style.textAlign = "center";
+      ghostDiv.style.border = "1px solid rgba(197,186,255,0.4)";
+      ghostDiv.style.background = "rgba(197,186,255,0.12)";
+      ghostDiv.style.borderRadius = "10px";
+      ghostDiv.style.color = "#5c4f88";
+      ghostDiv.style.fontSize = "14px";
+      ghostDiv.style.lineHeight = "1.5";
+      ghostDiv.style.cursor = "pointer";
+      ghostDiv.onclick = () => {
+        animateAdvanceToNextCard(widget, card._id, false);
+      };
+      body.appendChild(ghostDiv);
+      return;
+    } else if (card.type === "mcq") {
+      hideSkeleton();
       const questionDiv = document.createElement("div");
       questionDiv.textContent = card.question;
       questionDiv.style.marginBottom = "10px";
-      questionDiv.style.fontWeight = "bold";
+      decoratePromptAndWidget(questionDiv, card.question, card, safeIndex, widget);
       body.appendChild(questionDiv);
 
       const correctAnswer = normalizeAnswer(card.correct || "");
@@ -711,9 +1671,27 @@
           const btn = createOptionButton(option, false, false, (e) => {
             e.stopPropagation();
             const isCorrect = normalizeAnswer(option) === correctAnswer;
+            if (!isCorrect) {
+              pendingWrongAnswer = true;
+              lastAnswerWasCorrect = false;
+              cardState[cardKey] = { answered: false, correct: false, userAnswer: option };
+              currentCardInteracted = true;
+              if (card._id) widgetSubmitReview(card._id, 1, card.sourceId);
+              window.setTimeout(() => {
+                cardState[cardKey] = { answered: true, correct: false, userAnswer: option };
+                pendingWrongAnswer = false;
+                renderCurrentCard();
+              }, 180);
+              return;
+            }
+
+            pendingWrongAnswer = false;
+            lastAnswerWasCorrect = true;
             cardState[cardKey] = { answered: true, correct: isCorrect, userAnswer: option };
             currentCardInteracted = true;
-            renderCurrentCard();
+            maybeFireFirstCorrectBurst(widget);
+            if (card._id) widgetSubmitReview(card._id, 5, card.sourceId);
+            animateAdvanceToNextCard(widget, card._id, true);
           });
           body.appendChild(btn);
         });
@@ -721,33 +1699,42 @@
         const giveUpBtn = createInputButton("Give Up", "secondary");
         giveUpBtn.onclick = (e) => {
           e.stopPropagation();
+          sessionGiveUpCount += 1;
+          lastAnswerWasCorrect = false;
           cardState[cardKey] = { answered: true, correct: false, userAnswer: null };
           currentCardInteracted = true;
+          if (card._id) widgetSubmitReview(card._id, 1, card.sourceId);
           renderCurrentCard();
         };
         body.appendChild(giveUpBtn);
       }
     } else if (card.type === "fact") {
+      hideSkeleton();
       const factDiv = document.createElement("div");
       factDiv.textContent = `Do you know: ${card.content}`;
       factDiv.style.marginBottom = "10px";
-      factDiv.style.fontWeight = "500";
+      decoratePromptAndWidget(factDiv, `Do you know: ${card.content}`, card, safeIndex, widget);
       body.appendChild(factDiv);
 
       if (!state.answered) {
         const yesBtn = createInputButton("Yes", "primary");
         yesBtn.onclick = (e) => {
           e.stopPropagation();
+          lastAnswerWasCorrect = true;
           cardState[cardKey] = { answered: true, correct: true, userAnswer: "yes" };
           currentCardInteracted = true;
-          renderCurrentCard();
+          maybeFireFirstCorrectBurst(widget);
+          if (card._id) widgetSubmitReview(card._id, 4, card.sourceId);
+          animateAdvanceToNextCard(widget, card._id, true);
         };
 
         const noBtn = createInputButton("No", "secondary");
         noBtn.onclick = (e) => {
           e.stopPropagation();
+          lastAnswerWasCorrect = false;
           cardState[cardKey] = { answered: true, correct: false, userAnswer: "no" };
           currentCardInteracted = true;
+          if (card._id) widgetSubmitReview(card._id, 2, card.sourceId);
           renderCurrentCard();
         };
 
@@ -766,10 +1753,11 @@
       }
     } else {
       // short_answer or fill_blank
+      hideSkeleton();
       const questionDiv = document.createElement("div");
       questionDiv.textContent = card.question;
       questionDiv.style.marginBottom = "10px";
-      questionDiv.style.fontWeight = "bold";
+      decoratePromptAndWidget(questionDiv, card.question, card, safeIndex, widget);
       body.appendChild(questionDiv);
 
       if (state.answered) {
@@ -802,21 +1790,76 @@
         body.appendChild(input);
 
         const submitBtn = createInputButton("Submit", "primary");
+        let inputStartTime = null;
+        let backspaceCount = 0;
+
+        if (card.type === "fill_blank") {
+          submitBtn.style.background = "#e0e0e0";
+          submitBtn.style.border = "1px solid #e0e0e0";
+          submitBtn.style.color = "#333";
+
+          input.addEventListener("keydown", (event) => {
+            if (inputStartTime === null) {
+              inputStartTime = Date.now();
+            }
+
+            if (event.key === "Backspace") {
+              backspaceCount += 1;
+            }
+          });
+
+          input.addEventListener("keyup", () => {
+            const warmth = Math.min(input.value.length / 15, 1);
+            const nextColor = lerpColor("#e0e0e0", "#C5BAFF", warmth);
+            submitBtn.style.background = nextColor;
+            submitBtn.style.border = `1px solid ${nextColor}`;
+            submitBtn.style.color = warmth > 0.45 ? "#2f2350" : "#333";
+          });
+        }
+
         submitBtn.onclick = (e) => {
           e.stopPropagation();
           const correctAns = normalizeAnswer(card.correct || card.answer || "");
           const userAns = normalizeAnswer(input.value);
           const isCorrect = userAns === correctAns;
+          const elapsed = inputStartTime === null ? Number.POSITIVE_INFINITY : Date.now() - inputStartTime;
+          let quality = isCorrect ? 5 : 1;
+
+          if (card.type === "fill_blank") {
+            if (!isCorrect) {
+              quality = 0;
+            } else if (elapsed < 4000 && backspaceCount <= 1) {
+              quality = 5;
+            } else if (elapsed < 10000 && backspaceCount <= 2) {
+              quality = 4;
+            } else {
+              quality = 3;
+            }
+          }
+
           cardState[cardKey] = { answered: true, correct: isCorrect, userAnswer: input.value };
+          lastAnswerWasCorrect = isCorrect;
           currentCardInteracted = true;
+          if (isCorrect) {
+            maybeFireFirstCorrectBurst(widget);
+          }
+          if (card._id) widgetSubmitReview(card._id, quality, card.sourceId);
+          if (isCorrect) {
+            animateAdvanceToNextCard(widget, card._id, true);
+            return;
+          }
+
           renderCurrentCard();
         };
 
         const giveUpBtn = createInputButton("Give Up", "secondary");
         giveUpBtn.onclick = (e) => {
           e.stopPropagation();
+          sessionGiveUpCount += 1;
+          lastAnswerWasCorrect = false;
           cardState[cardKey] = { answered: true, correct: false, userAnswer: null };
           currentCardInteracted = true;
+          if (card._id) widgetSubmitReview(card._id, 1, card.sourceId);
           renderCurrentCard();
         };
 
@@ -890,7 +1933,7 @@
     }
   }
 
-  function triggerOnIdle() {
+  async function triggerOnIdle() {
     if (!cards.length) {
       const widget = document.getElementById(WIDGET_ID);
       if (widget) {
@@ -911,6 +1954,33 @@
       return;
     }
 
+    const widget = document.getElementById(WIDGET_ID);
+    if (widget) {
+      const entryAnimation = await getEntryAnimation();
+      const animationNameMatch = typeof entryAnimation.style?.animation === "string"
+        ? entryAnimation.style.animation.match(/^[^\s]+/)
+        : null;
+      const animationName = animationNameMatch ? animationNameMatch[0] : null;
+
+      if (animationName && !document.getElementById(animationName)) {
+        const animationStyle = document.createElement("style");
+        animationStyle.id = animationName;
+        animationStyle.textContent = entryAnimation.keyframe;
+        (document.head || document.documentElement).appendChild(animationStyle);
+      }
+
+      Object.entries(entryAnimation.style || {}).forEach(([property, value]) => {
+        widget.style[property] = value;
+      });
+
+      widget.addEventListener("animationend", () => {
+        Object.keys(entryAnimation.style || {}).forEach((property) => {
+          widget.style[property] = "";
+        });
+      }, { once: true });
+    }
+
+    lastIdleTriggerAt = Date.now();
     renderCurrentCard();
     console.log(`[Recall Widget] Card ${index + 1}/${cards.length} shown on idle trigger`);
   }
@@ -963,12 +2033,19 @@
   }
 
   function setCards(nextCards) {
-    cards = Array.isArray(nextCards)
+    allCardsForLogging = Array.isArray(nextCards)
       ? nextCards.filter((card) => card && (card.question || card.content))
       : [];
 
+    // Filter to only due cards using SM-2 state
+    // Falls back to showing all cards if SM-2 state is empty (e.g. before calibration)
+    const dueCards = widgetGetDueCards(allCardsForLogging, sm2State);
+    cards = dueCards.length > 0 ? dueCards : allCardsForLogging;
+    logAllCardIntervals(allCardsForLogging, sm2State);
+
     index = 0;
     cardState = {};
+    pendingWrongAnswer = false;
     currentCardInteracted = false;
     idleTriggered = false;
     lastUserActivityAt = Date.now();
@@ -976,38 +2053,89 @@
   }
 
   function loadCardsFromStorage() {
-    if (!chrome || !chrome.storage || !chrome.storage.local) {
+    if (!isChromeStorageAvailable()) {
       return;
     }
 
-    chrome.storage.local.get([STORAGE_KEY, DND_MODE_STORAGE_KEY], (result) => {
-      if (chrome.runtime.lastError) {
-        return;
-      }
+    safeStorageGet([
+      STORAGE_KEY,
+      DND_MODE_STORAGE_KEY,
+      "recallSM2State",
+      "recallExamDate",
+      "recallLastSourceId",
+      "recallLastReviewedAt",
+      "pulsedAt",
+    ], {}, async (result) => {
       isDndMode = Boolean(result[DND_MODE_STORAGE_KEY]);
+      sm2State = result.recallSM2State || {};
       updateDndButtonVisual();
-      setCards(result[STORAGE_KEY]);
+      const contextualCards = await getCardsForCurrentContext(result[STORAGE_KEY]);
+      const ghostCards = await injectGhostCardIfNeeded(contextualCards, result.recallLastSourceId || contextualCards[0]?.sourceId || null);
+      setCards(ghostCards);
       applyDndModeUi();
+
+      const sourceId = result.recallLastSourceId || ghostCards.find((card) => card?.sourceId)?.sourceId || null;
+      const lastReviewedAtMap = result.recallLastReviewedAt || {};
+      const pulsedAt = result.pulsedAt || {};
+      const today = new Date().toISOString().slice(0, 10);
+      const lastReviewedAt = Number(sourceId ? lastReviewedAtMap[sourceId] : 0) || 0;
+
+      if (sourceId && lastReviewedAt && (Date.now() - lastReviewedAt > 3 * 86400000) && pulsedAt[sourceId] !== today) {
+        safeStorageSet({
+          pulsedAt: {
+            ...pulsedAt,
+            [sourceId]: today,
+          },
+        }, () => {
+          window.setTimeout(() => {
+            triggerDndSilencePulseOnce();
+          }, 0);
+        });
+      }
     });
+
+    safeStorageSet({ recallLastOpenedAt: Date.now() });
   }
 
-  chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName !== "local") {
+  function registerStorageChangeListener() {
+    if (!isExtensionContextValid() || storageChangeListener) {
       return;
     }
 
-    if (changes[DND_MODE_STORAGE_KEY]) {
-      isDndMode = Boolean(changes[DND_MODE_STORAGE_KEY].newValue);
-      isDndPreview = false;
-      updateDndButtonVisual();
-      applyDndModeUi();
-    }
+    storageChangeListener = (changes, areaName) => {
+      if (areaName !== "local") {
+        return;
+      }
 
-    if (changes[STORAGE_KEY]) {
-      setCards(changes[STORAGE_KEY].newValue);
-      applyDndModeUi();
+      if (changes[DND_MODE_STORAGE_KEY]) {
+        isDndMode = Boolean(changes[DND_MODE_STORAGE_KEY].newValue);
+        isDndPreview = false;
+        updateDndButtonVisual();
+        applyDndModeUi();
+      }
+
+      if (changes["recallSM2State"]) {
+        sm2State = changes["recallSM2State"].newValue || {};
+        logAllCardIntervals(allCardsForLogging, sm2State);
+      }
+
+      if (changes[STORAGE_KEY]) {
+        getCardsForCurrentContext(changes[STORAGE_KEY].newValue).then((contextualCards) => {
+          setCards(contextualCards);
+          applyDndModeUi();
+        });
+      }
+    };
+
+    try {
+      chrome.storage.onChanged.addListener(storageChangeListener);
+    } catch (error) {
+      if (isContextInvalidationError(error)) {
+        handleExtensionContextInvalidated(error);
+      }
+      storageChangeListener = null;
     }
-  });
+  }
 
   window.addEventListener("message", (event) => {
     if (event.origin !== window.location.origin) {
@@ -1020,8 +2148,8 @@
     }
 
     const nextCards = Array.isArray(payload.cards) ? payload.cards : [];
-    chrome.storage.local.set({ [STORAGE_KEY]: nextCards }, () => {
-      if (chrome.runtime.lastError) {
+    safeStorageSet({ [STORAGE_KEY]: nextCards }, (didSave) => {
+      if (!didSave) {
         console.log("[Recall Widget] Failed to sync cards from dashboard");
         return;
       }
@@ -1031,10 +2159,12 @@
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
+      registerStorageChangeListener();
       createWidget();
       loadCardsFromStorage();
     }, { once: true });
   } else {
+    registerStorageChangeListener();
     createWidget();
     loadCardsFromStorage();
   }

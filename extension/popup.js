@@ -47,6 +47,67 @@ const quizNextBtn = document.getElementById("quizNextBtn");
 
 const API_BASE_URL = "http://localhost:3000/api";
 
+// SM-2 helpers
+
+function sm2GetNextInterval(repetitions, easeFactor, prevInterval, quality) {
+  if (quality < 3) return 600000; // 10 min reset
+  switch (repetitions) {
+    case 0: return 600000; // 10 minutes
+    case 1: return 3600000; // 1 hour
+    case 2: return 28800000; // 8 hours
+    case 3: return 86400000; // 1 day
+    default: return Math.round(prevInterval * easeFactor);
+  }
+}
+
+function sm2Calculate(cardState, quality) {
+  let { easeFactor, repetitions, interval, stability } = cardState;
+
+  if (quality >= 3) {
+    interval = sm2GetNextInterval(repetitions, easeFactor, interval, quality);
+    repetitions += 1;
+    stability = stability * (1 + 0.5 * quality / 5);
+  } else {
+    repetitions = 0;
+    interval = 600000;
+    stability = Math.max(1, stability * 0.5);
+  }
+
+  easeFactor = Math.max(
+    1.3,
+    easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+  );
+
+  return {
+    easeFactor,
+    repetitions,
+    interval,
+    stability,
+    nextReview: new Date(Date.now() + interval).toISOString(),
+    lastReviewed: new Date().toISOString(),
+  };
+}
+
+function sm2DefaultState() {
+  return {
+    easeFactor: 2.5,
+    repetitions: 0,
+    interval: 600000,
+    stability: 1,
+    nextReview: new Date().toISOString(),
+    lastReviewed: null,
+  };
+}
+
+async function loadSM2State() {
+  const result = await getLocalExtensionStorage(["recallSM2State"]);
+  return result.recallSM2State || {};
+}
+
+async function saveSM2State(sm2State) {
+  await setLocalExtensionStorage({ recallSM2State: sm2State });
+}
+
 // IndexedDB Helper
 const DB_NAME = "RecallExtensionDB";
 const DB_VERSION = 1;
@@ -213,6 +274,7 @@ const quizState = {
   selectedOption: "",
   checked: false,
   completionSaved: false,
+  results: [],
 };
 
 const authState = {
@@ -634,9 +696,15 @@ function getCalibrationCards(cards) {
     return [];
   }
 
-  return cards
-    .filter((card) => card && (card.question || card.content))
-    .slice(0, 5);
+  const mcqs = cards.filter((card) => card && card.type === 'mcq' && card.question);
+
+  // Fisher-Yates shuffle
+  for (let i = mcqs.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [mcqs[i], mcqs[j]] = [mcqs[j], mcqs[i]];
+  }
+
+  return mcqs.slice(0, 5);
 }
 
 function renderOptionButtons(options) {
@@ -673,23 +741,17 @@ function renderCurrentCard() {
   const card = getCurrentCard();
 
   if (!card) {
-    if (!quizState.completionSaved) {
-      quizState.completionSaved = true;
-      saveResultToStorage({ recallCalibrationCompleted: true });
-    }
-
-    quizMeta.textContent = "Done";
-    quizPrompt.textContent = "Quick calibration complete. You are ready to review.";
-    quizOptions.innerHTML = "";
-    quizAnswerInput.style.display = "none";
-    quizSubmitBtn.textContent = "Go to Home";
+    quizMeta.textContent = 'Done';
+    quizPrompt.textContent = 'Quick calibration complete. You are ready to review.';
+    quizOptions.innerHTML = '';
+    quizAnswerInput.style.display = 'none';
+    quizSubmitBtn.textContent = 'Go to Home';
     quizSubmitBtn.disabled = false;
     quizSubmitBtn.onclick = () => {
-      updateUserDisplay();
-      showScreen("home");
+      finishCalibration();
     };
     quizNextBtn.disabled = true;
-    quizFeedback.textContent = "";
+    quizFeedback.textContent = '';
     return;
   }
 
@@ -728,33 +790,63 @@ function checkCurrentAnswer() {
     return;
   }
 
-  let isCorrect = true;
+  let quality = 2; // default: skipped
 
   if (card.type === "mcq") {
     if (!quizState.selectedOption) {
-      quizFeedback.textContent = "Please choose an option.";
+      quizFeedback.textContent = 'Please choose an option.';
       return;
     }
-    isCorrect = normalizeText(quizState.selectedOption) === normalizeText(card.correct);
+    const isCorrect =
+      normalizeText(quizState.selectedOption) === normalizeText(card.correct);
+    quality = isCorrect ? 5 : 1;
+    quizFeedback.textContent = isCorrect
+      ? 'Correct.'
+      : `Not quite. Correct answer: ${card.correct || 'N/A'}`;
   } else if (card.type === "fact") {
-    quizFeedback.textContent = "Fact noted. Click Next.";
-    quizState.checked = true;
-    quizNextBtn.disabled = false;
-    return;
+    quality = 4;
+    quizFeedback.textContent = 'Fact noted. Click Next.';
   } else {
     const typed = normalizeText(quizAnswerInput.value);
     if (!typed) {
-      quizFeedback.textContent = "Please enter an answer.";
+      quizFeedback.textContent = 'Please enter an answer.';
       return;
     }
-    isCorrect = typed === normalizeText(card.answer);
+    const isCorrect = typed === normalizeText(card.answer);
+    quality = isCorrect ? 5 : 1;
+    quizFeedback.textContent = isCorrect
+      ? 'Correct.'
+      : `Not quite. Correct answer: ${card.answer || 'N/A'}`;
+  }
+
+  if (card._id) {
+    quizState.results.push({ cardId: card._id, quality });
   }
 
   quizState.checked = true;
   quizNextBtn.disabled = false;
-  quizFeedback.textContent = isCorrect
-    ? "Correct."
-    : `Not quite. Correct answer: ${card.correct || card.answer || "N/A"}`;
+}
+
+async function finishCalibration() {
+  if (!quizState.completionSaved) {
+    quizState.completionSaved = true;
+    await saveResultToStorage({ recallCalibrationCompleted: true });
+  }
+
+  // Load existing SM-2 state (may already have entries from a previous session)
+  const sm2State = await loadSM2State();
+
+  // Run SM-2 locally for every answered calibration card
+  quizState.results.forEach(({ cardId, quality }) => {
+    const existing = sm2State[cardId] || sm2DefaultState();
+    sm2State[cardId] = sm2Calculate(existing, quality);
+  });
+
+  // Persist updated SM-2 state to chrome.storage.local
+  await saveSM2State(sm2State);
+
+  updateUserDisplay();
+  showScreen('home');
 }
 
 function moveToNextCard() {
@@ -782,9 +874,10 @@ function moveToNextCard() {
 function initCalibration(cards) {
   quizState.cards = getCalibrationCards(cards);
   quizState.currentIndex = 0;
-  quizState.selectedOption = "";
+  quizState.selectedOption = '';
   quizState.checked = false;
   quizState.completionSaved = false;
+  quizState.results = [];
   renderCurrentCard();
 }
 
@@ -805,7 +898,7 @@ async function runProgressSimulation() {
 
   const { sourceId } = await callApi("/sources", {
     method: "POST",
-    body: JSON.stringify({ topic, notes }),
+    body: JSON.stringify({ topic, notes, examDate }),
   });
 
   await waitForCompletion(sourceId);

@@ -47,7 +47,7 @@ router.get('/sources', authMiddleware, async (req, res) => {
  */
 router.post('/sources', authMiddleware, async (req, res) => {
     try {
-        const { topic, notes } = req.body;
+        const { topic, notes, examDate } = req.body;
         console.log('[API] POST /api/sources received', {
             userId: req.user._id,
             hasTopic: Boolean(topic),
@@ -64,6 +64,7 @@ router.post('/sources', authMiddleware, async (req, res) => {
             userId: req.user._id,
             topic,
             notes,
+            examDate: examDate ? new Date(examDate) : null,
             status: 'pending'
         });
 

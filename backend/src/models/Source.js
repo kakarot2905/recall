@@ -14,6 +14,9 @@ const sourceSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    examDate: {
+        type: Date
+    },
     status: {
         type: String,
         enum: ['pending', 'processing', 'done', 'failed'],
