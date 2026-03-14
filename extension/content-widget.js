@@ -616,13 +616,12 @@
     });
   }
 
-  function animateAdvanceToNextCard(widget, cardId, wasCorrect) {
+  function animateAdvanceToNextCard(widget, cardId, wasCorrect, quality) {
     const body = widget?.querySelector(`#${WIDGET_ID}-body`);
     const speed = parseFloat(widget?.style.getPropertyValue("--recall-anim-speed") || "1") || 1;
     const durationMs = Math.round(300 * speed);
-    const repetitions = Number(cardId ? sm2State[cardId]?.repetitions : 0);
-    const nextRepetitions = wasCorrect ? repetitions + 1 : repetitions;
-    const useMasteredExit = wasCorrect && nextRepetitions >= 5;
+    const currentReps = Number((cardId ? sm2State[cardId]?.repetitions : null) ?? 0);
+    const useMasteredExit = wasCorrect && quality >= 3 && (currentReps + 1) >= 5;
 
     const advance = () => {
       if (body) {
@@ -1691,7 +1690,7 @@
             currentCardInteracted = true;
             maybeFireFirstCorrectBurst(widget);
             if (card._id) widgetSubmitReview(card._id, 5, card.sourceId);
-            animateAdvanceToNextCard(widget, card._id, true);
+            animateAdvanceToNextCard(widget, card._id, true, 5);
           });
           body.appendChild(btn);
         });
@@ -1725,7 +1724,7 @@
           currentCardInteracted = true;
           maybeFireFirstCorrectBurst(widget);
           if (card._id) widgetSubmitReview(card._id, 4, card.sourceId);
-          animateAdvanceToNextCard(widget, card._id, true);
+          animateAdvanceToNextCard(widget, card._id, true, 4);
         };
 
         const noBtn = createInputButton("No", "secondary");
@@ -1845,7 +1844,7 @@
           }
           if (card._id) widgetSubmitReview(card._id, quality, card.sourceId);
           if (isCorrect) {
-            animateAdvanceToNextCard(widget, card._id, true);
+            animateAdvanceToNextCard(widget, card._id, true, quality);
             return;
           }
 

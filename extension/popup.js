@@ -85,6 +85,8 @@ function sm2Calculate(cardState, quality) {
     stability,
     nextReview: new Date(Date.now() + interval).toISOString(),
     lastReviewed: new Date().toISOString(),
+    lastQuality: quality,
+    qualityHistory: [{ quality, reviewedAt: new Date().toISOString() }],
   };
 }
 
@@ -908,15 +910,26 @@ async function runProgressSimulation() {
     method: "GET",
   });
 
+  const annotatedCards = cards.map((c) => ({
+    ...c,
+    topic,
+    sourceId: String(sourceId),
+  }));
+
   await saveResultToStorage({
     recallLastSourceId: sourceId,
-    recallCards: cards,
+    recallCards: annotatedCards,
     recallTopic: topic,
     recallExamDate: examDate,
     recallCalibrationCompleted: false,
   });
 
-  await saveWidgetCards(cards);
+  await saveWidgetCards(annotatedCards);
+
+  await setLocalExtensionStorage({
+    recallExamDate: examDate,
+    recallLastSourceId: sourceId,
+  });
 
   initCalibration(cards);
   showScreen("quiz");
