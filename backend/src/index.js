@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import sourcesRouter from './routes/sources.js';
 import authRouter from './routes/auth.js';
+import checkAnswerRouter from './routes/checkAnswer.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -41,6 +42,7 @@ mongoose.connect(process.env.MONGODB_URI)
 // Routes
 app.use('/api/auth', authRouter);
 app.use('/api', sourcesRouter);
+app.use('/api', checkAnswerRouter);
 
 app.get('/', (_req, res) => {
     res.redirect('/dashboard');

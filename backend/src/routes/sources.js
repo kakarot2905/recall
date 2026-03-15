@@ -59,6 +59,14 @@ router.post('/sources', authMiddleware, async (req, res) => {
             return res.status(400).json({ error: 'Topic and notes are required' });
         }
 
+        const recentSource = await Source.findOne({ userId: req.user._id })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        if (recentSource && (Date.now() - new Date(recentSource.createdAt).getTime()) < 60000) {
+            return res.status(429).json({ error: 'Please wait before generating another topic.' });
+        }
+
         // Create source document
         const source = new Source({
             userId: req.user._id,
@@ -125,7 +133,7 @@ router.get('/sources/:sourceId/cards', authMiddleware, async (req, res) => {
             return res.status(404).json({ error: 'Source not found' });
         }
 
-        const cards = await Card.find({ sourceId });
+        const cards = await Card.find({ sourceId: source._id });
 
         console.log('[API] Cards fetched', { sourceId, cardCount: cards.length });
         res.json({ cards });

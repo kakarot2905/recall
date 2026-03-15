@@ -390,15 +390,17 @@
     if (!isChromeStorageAvailable()) return;
 
     safeStorageGet(["recallSM2State", "recallLastReviewedAt"], {}, (result) => {
-      const sm2State = result.recallSM2State || {};
+      const storedSM2State = result.recallSM2State || {};
       const lastReviewedAt = result.recallLastReviewedAt || {};
-      const existing = sm2State[cardId] || widgetSM2Default();
-      sm2State[cardId] = widgetSM2Calculate(existing, quality);
+      const existing = storedSM2State[cardId] || widgetSM2Default();
+      storedSM2State[cardId] = widgetSM2Calculate(existing, quality);
+      sm2State[cardId] = storedSM2State[cardId];
       if (sourceId) {
+        storedSM2State[cardId].sourceId = sourceId;
         sm2State[cardId].sourceId = sourceId;
       }
 
-      const storagePayload = { recallSM2State: sm2State };
+      const storagePayload = { recallSM2State: storedSM2State };
       if (sourceId) {
         storagePayload.recallLastSourceId = sourceId;
         storagePayload.recallLastReviewedAt = {
@@ -412,7 +414,7 @@
           console.error("[Recall Widget] Failed to save SM-2 state");
           return;
         }
-        console.log(`[Recall Widget] SM-2 updated for card ${cardId}, quality ${quality}, nextReview: ${sm2State[cardId].nextReview}`);
+        console.log(`[Recall Widget] SM-2 updated for card ${cardId}, quality ${quality}, nextReview: ${storedSM2State[cardId].nextReview}`);
         logAllCardIntervals(allCardsForLogging, sm2State);
       });
     });
@@ -458,6 +460,66 @@
 
   function normalizeAnswer(text) {
     return text.toLowerCase().trim();
+  }
+
+  function levenshtein(a, b) {
+    const m = a.length;
+    const n = b.length;
+    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+    for (let i = 0; i <= m; i += 1) {
+      dp[i][0] = i;
+    }
+
+    for (let j = 0; j <= n; j += 1) {
+      dp[0][j] = j;
+    }
+
+    for (let i = 1; i <= m; i += 1) {
+      for (let j = 1; j <= n; j += 1) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        dp[i][j] = Math.min(
+          dp[i - 1][j] + 1,
+          dp[i][j - 1] + 1,
+          dp[i - 1][j - 1] + cost,
+        );
+      }
+    }
+
+    return dp[m][n];
+  }
+
+  function fuzzyMatch(userAns, correctAns) {
+    const a = normalizeAnswer(userAns || "");
+    const b = normalizeAnswer(correctAns || "");
+
+    if (!a || !b) {
+      return false;
+    }
+
+    const dist = levenshtein(a, b);
+    const maxLen = Math.max(a.length, b.length);
+    const similarity = 1 - (dist / maxLen);
+    return similarity >= 0.8;
+  }
+
+  async function semanticMatch(question, userAnswer, expectedAnswer) {
+    try {
+      const response = await fetch("http://localhost:3000/api/check-answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, userAnswer, expectedAnswer }),
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const data = await response.json();
+      return !!data.correct;
+    } catch {
+      return false;
+    }
   }
 
   function lerpColor(from, to, t) {
@@ -576,11 +638,13 @@
       sourceId,
     };
 
-    safeStorageSet({
-      ghostCardShown: {
-        ...ghostCardShown,
-        [sourceId]: true,
-      },
+    await new Promise((resolve) => {
+      safeStorageSet({
+        ghostCardShown: {
+          ...ghostCardShown,
+          [sourceId]: true,
+        },
+      }, () => resolve());
     });
 
     return [ghostCard, ...safeCards];
@@ -2028,11 +2092,12 @@
           });
         }
 
-        submitBtn.onclick = (e) => {
+        submitBtn.onclick = async (e) => {
           e.stopPropagation();
           const correctAns = normalizeAnswer(card.correct || card.answer || "");
           const userAns = normalizeAnswer(input.value);
-          const isCorrect = userAns === correctAns;
+          const isCorrect = fuzzyMatch(userAns, correctAns)
+            || await semanticMatch(card.question || "", userAns, correctAns);
           const elapsed = inputStartTime === null ? Number.POSITIVE_INFINITY : Date.now() - inputStartTime;
           let quality = isCorrect ? 5 : 1;
 

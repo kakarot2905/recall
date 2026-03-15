@@ -36,6 +36,7 @@ const dateError = document.getElementById("dateError");
 const formError = document.getElementById("formError");
 const progressStatus = document.getElementById("progressStatus");
 const setupStatus = document.getElementById("setupStatus");
+const generateBtn = document.getElementById("generateBtn");
 const stepRows = Array.from(document.querySelectorAll(".step"));
 const quizMeta = document.getElementById("quizMeta");
 const quizPrompt = document.getElementById("quizPrompt");
@@ -62,6 +63,9 @@ function sm2GetNextInterval(repetitions, easeFactor, prevInterval, quality) {
 
 function sm2Calculate(cardState, quality) {
   let { easeFactor, repetitions, interval, stability } = cardState;
+  const qualityHistory = Array.isArray(cardState.qualityHistory)
+    ? cardState.qualityHistory.slice(-9)
+    : [];
 
   if (quality >= 3) {
     interval = sm2GetNextInterval(repetitions, easeFactor, interval, quality);
@@ -86,7 +90,7 @@ function sm2Calculate(cardState, quality) {
     nextReview: new Date(Date.now() + interval).toISOString(),
     lastReviewed: new Date().toISOString(),
     lastQuality: quality,
-    qualityHistory: [{ quality, reviewedAt: new Date().toISOString() }],
+    qualityHistory: [...qualityHistory, { quality, reviewedAt: new Date().toISOString() }],
   };
 }
 
@@ -98,6 +102,7 @@ function sm2DefaultState() {
     stability: 1,
     nextReview: new Date().toISOString(),
     lastReviewed: null,
+    qualityHistory: [],
   };
 }
 
@@ -378,9 +383,8 @@ async function callApi(path, options = {}) {
       await handleLogout();
       throw new Error("Session expired. Please login again.");
     }
-    throw new Error(payload.error || "Request failed");
-
     console.log(`[API] Success ${path}`);
+    throw new Error(payload.error || "Request failed");
   }
 
   return payload;
@@ -806,11 +810,75 @@ function renderCurrentCard() {
   }
 }
 
-function normalizeText(value) {
+function normalizeAnswer(value) {
   return String(value || "").trim().toLowerCase();
 }
 
-function checkCurrentAnswer() {
+function normalizeText(value) {
+  return normalizeAnswer(value);
+}
+
+function levenshtein(a, b) {
+  const m = a.length;
+  const n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+  for (let i = 0; i <= m; i += 1) {
+    dp[i][0] = i;
+  }
+
+  for (let j = 0; j <= n; j += 1) {
+    dp[0][j] = j;
+  }
+
+  for (let i = 1; i <= m; i += 1) {
+    for (let j = 1; j <= n; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost,
+      );
+    }
+  }
+
+  return dp[m][n];
+}
+
+function fuzzyMatch(userAns, correctAns) {
+  const a = normalizeAnswer(userAns || "");
+  const b = normalizeAnswer(correctAns || "");
+
+  if (!a || !b) {
+    return false;
+  }
+
+  const dist = levenshtein(a, b);
+  const maxLen = Math.max(a.length, b.length);
+  const similarity = 1 - (dist / maxLen);
+  return similarity >= 0.8;
+}
+
+async function semanticMatch(question, userAnswer, expectedAnswer) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/check-answer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, userAnswer, expectedAnswer }),
+    });
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const data = await response.json();
+    return !!data.correct;
+  } catch {
+    return false;
+  }
+}
+
+async function checkCurrentAnswer() {
   const card = getCurrentCard();
   if (!card || quizState.checked) {
     return;
@@ -833,12 +901,14 @@ function checkCurrentAnswer() {
     quality = 4;
     quizFeedback.textContent = 'Fact noted. Click Next.';
   } else {
-    const typed = normalizeText(quizAnswerInput.value);
+    const typed = normalizeAnswer(quizAnswerInput.value);
     if (!typed) {
       quizFeedback.textContent = 'Please enter an answer.';
       return;
     }
-    const isCorrect = typed === normalizeText(card.answer);
+    const correctAns = normalizeAnswer(card.answer || card.correct || "");
+    const isCorrect = fuzzyMatch(typed, correctAns)
+      || await semanticMatch(card.question || "", typed, correctAns);
     quality = isCorrect ? 5 : 1;
     quizFeedback.textContent = isCorrect
       ? 'Correct.'
@@ -847,6 +917,12 @@ function checkCurrentAnswer() {
 
   if (card._id) {
     quizState.results.push({ cardId: card._id, quality });
+
+    const sm2Result = await getLocalExtensionStorage(["recallSM2State"]);
+    const sm2State = sm2Result.recallSM2State || {};
+    const existing = sm2State[card._id] || sm2DefaultState();
+    sm2State[card._id] = sm2Calculate(existing, quality);
+    await saveSM2State(sm2State);
   }
 
   quizState.checked = true;
@@ -859,30 +935,18 @@ async function finishCalibration() {
     await saveResultToStorage({ recallCalibrationCompleted: true });
   }
 
-  // Load existing SM-2 state (may already have entries from a previous session)
-  const sm2State = await loadSM2State();
-
-  // Run SM-2 locally for every answered calibration card
-  quizState.results.forEach(({ cardId, quality }) => {
-    const existing = sm2State[cardId] || sm2DefaultState();
-    sm2State[cardId] = sm2Calculate(existing, quality);
-  });
-
-  // Persist updated SM-2 state to chrome.storage.local
-  await saveSM2State(sm2State);
-
   updateUserDisplay();
   showScreen('home');
 }
 
-function moveToNextCard() {
+async function moveToNextCard() {
   const card = getCurrentCard();
   if (!card) {
     return;
   }
 
   if (!quizState.checked) {
-    checkCurrentAnswer();
+    await checkCurrentAnswer();
   }
 
   if (!quizState.checked) {
@@ -1048,7 +1112,12 @@ quizNextBtn.addEventListener("click", moveToNextCard);
 setupForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
+  generateBtn.disabled = true;
+  generateBtn.textContent = "Generating...";
+
   if (!validateForm()) {
+    generateBtn.disabled = false;
+    generateBtn.textContent = "Generate";
     return;
   }
 
@@ -1056,9 +1125,13 @@ setupForm.addEventListener("submit", async (event) => {
 
   try {
     await runProgressSimulation();
+    generateBtn.disabled = false;
+    generateBtn.textContent = "Generate";
   } catch (error) {
     showScreen("setup");
     formError.textContent = error.message || "Failed to generate cards";
+    generateBtn.disabled = false;
+    generateBtn.textContent = "Generate";
   }
 });
 

@@ -5,6 +5,22 @@ import Card from '../models/Card.js';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
+async function withRetry(fn, maxAttempts = 3, delayMs = 1500) {
+    let lastError;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            return await fn();
+        } catch (error) {
+            lastError = error;
+            console.warn(`[Retry] Attempt ${attempt}/${maxAttempts} failed:`, error.message);
+            if (attempt < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, delayMs * attempt));
+            }
+        }
+    }
+    throw lastError;
+}
+
 /**
  * Agent 1: Quality & Enrichment
  * Scores notes and enriches if needed
@@ -124,9 +140,9 @@ export async function runAgents(sourceId, topic, notes) {
         console.log('[Pipeline] Source status updated', { sourceId, status: 'processing' });
 
         // Run agents sequentially
-        const enrichedContent = await agent1(topic, notes);
-        const mcqCards = await agent2(topic, enrichedContent);
-        const shortCards = await agent3(topic, enrichedContent);
+        const enrichedContent = await withRetry(() => agent1(topic, notes));
+        const mcqCards = await withRetry(() => agent2(topic, enrichedContent));
+        const shortCards = await withRetry(() => agent3(topic, enrichedContent));
 
         // Combine all cards
         const allCards = [...mcqCards, ...shortCards];
