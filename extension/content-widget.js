@@ -125,6 +125,12 @@
   let sessionGiveUpHourTriggered = false;
   let lastIdleTriggerAt = null;
   let lastAnswerWasCorrect = false;
+  let completedQueueCardKeys = new Set();
+  let queueCompleted = false;
+  let dueQueueRefreshTimerId = null;
+  let widgetRevealWidthTimerId = null;
+  let widgetRevealHeightTimerId = null;
+  let widgetRevealFinalizeTimerId = null;
 
   // SM-2 helpers (client-side, no network)
 
@@ -198,6 +204,109 @@
       if (!state || !state.nextReview) return true;
       return new Date(state.nextReview).getTime() <= now;
     });
+  }
+
+  function getQueueCardKey(card, fallbackIndex) {
+    if (!card) {
+      return `unknown-${fallbackIndex}`;
+    }
+
+    return card._id || `${card.type || "card"}:${card.sourceId || "unknown"}:${fallbackIndex}`;
+  }
+
+  function hideWidgetUntilQueueRefresh() {
+    const widget = document.getElementById(WIDGET_ID);
+    if (widget) {
+      resetWidgetRevealState(widget);
+    }
+    isWidgetVisible = false;
+    setDotVisible(false);
+  }
+
+  function clearDueQueueRefreshTimer() {
+    if (!dueQueueRefreshTimerId) {
+      return;
+    }
+
+    window.clearTimeout(dueQueueRefreshTimerId);
+    dueQueueRefreshTimerId = null;
+  }
+
+  function scheduleDueQueueRefresh() {
+    clearDueQueueRefreshTimer();
+
+    if (!allCardsForLogging.length) {
+      return;
+    }
+
+    const now = Date.now();
+    let nextDueDelayMs = Infinity;
+
+    allCardsForLogging.forEach((card) => {
+      if (!card || !card._id) {
+        return;
+      }
+
+      const nextReviewAt = sm2State[card._id]?.nextReview;
+      if (!nextReviewAt) {
+        nextDueDelayMs = 0;
+        return;
+      }
+
+      const nextReviewMs = new Date(nextReviewAt).getTime();
+      if (Number.isNaN(nextReviewMs)) {
+        return;
+      }
+
+      const delayMs = nextReviewMs - now;
+      if (delayMs < nextDueDelayMs) {
+        nextDueDelayMs = delayMs;
+      }
+    });
+
+    if (!Number.isFinite(nextDueDelayMs)) {
+      return;
+    }
+
+    const delay = Math.max(500, Math.min(Math.max(0, nextDueDelayMs) + 200, 60000));
+    dueQueueRefreshTimerId = window.setTimeout(() => {
+      dueQueueRefreshTimerId = null;
+      setCards(allCardsForLogging);
+      applyDndModeUi();
+    }, delay);
+  }
+
+  function advanceToNextUnansweredCard() {
+    if (!cards.length) {
+      return false;
+    }
+
+    const currentKey = getQueueCardKey(cards[index], index);
+    completedQueueCardKeys.add(currentKey);
+
+    let nextIndex = -1;
+    for (let offset = 1; offset <= cards.length; offset += 1) {
+      const candidateIndex = (index + offset) % cards.length;
+      const candidateKey = getQueueCardKey(cards[candidateIndex], candidateIndex);
+      if (!completedQueueCardKeys.has(candidateKey)) {
+        nextIndex = candidateIndex;
+        break;
+      }
+    }
+
+    cardState = {};
+    currentCardInteracted = false;
+    pendingWrongAnswer = false;
+
+    if (nextIndex === -1) {
+      queueCompleted = true;
+      hideWidgetUntilQueueRefresh();
+      console.log("[Recall Widget] Queue completed. Waiting for refreshed cards.");
+      return false;
+    }
+
+    index = nextIndex;
+    return true;
   }
 
   function moveCardToFront(cardsList, predicate) {
@@ -334,6 +443,14 @@
         nextReview: nextReviewAt,
         minutesUntilReview: msUntilReview == null ? null : Math.round(msUntilReview / 60000),
       };
+    }).sort((leftRow, rightRow) => {
+      const leftMinutes = leftRow.minutesUntilReview;
+      const rightMinutes = rightRow.minutesUntilReview;
+
+      if (leftMinutes == null && rightMinutes == null) return 0;
+      if (leftMinutes == null) return 1;
+      if (rightMinutes == null) return -1;
+      return leftMinutes - rightMinutes;
     });
 
     console.table(rows);
@@ -630,10 +747,11 @@
         body.style.opacity = "";
       }
 
-      index = (index + 1) % cards.length;
-      cardState = {};
-      currentCardInteracted = false;
-      pendingWrongAnswer = false;
+      const hasNextCard = advanceToNextUnansweredCard();
+      if (!hasNextCard) {
+        return;
+      }
+
       renderCurrentCard();
     };
 
@@ -901,6 +1019,99 @@
     }
   }
 
+  function clearWidgetRevealTimers() {
+    if (widgetRevealWidthTimerId) {
+      window.clearTimeout(widgetRevealWidthTimerId);
+      widgetRevealWidthTimerId = null;
+    }
+
+    if (widgetRevealHeightTimerId) {
+      window.clearTimeout(widgetRevealHeightTimerId);
+      widgetRevealHeightTimerId = null;
+    }
+
+    if (widgetRevealFinalizeTimerId) {
+      window.clearTimeout(widgetRevealFinalizeTimerId);
+      widgetRevealFinalizeTimerId = null;
+    }
+  }
+
+  function setWidgetContentOpacity(widget, opacity) {
+    const body = widget?.querySelector(`#${WIDGET_ID}-body`);
+    const footer = widget?.querySelector(`#${WIDGET_ID}-footer`);
+    const titleContainer = widget?.firstElementChild;
+
+    [titleContainer, body, footer].forEach((element) => {
+      if (element) {
+        element.style.opacity = opacity;
+      }
+    });
+  }
+
+  function resetWidgetRevealState(widget) {
+    if (!widget) {
+      return;
+    }
+
+    clearWidgetRevealTimers();
+    widget.dataset.isRevealing = "false";
+    widget.style.display = "none";
+    widget.style.width = "320px";
+    widget.style.height = "";
+    widget.style.padding = "12px";
+    widget.style.borderRadius = "12px";
+    widget.style.transition = "";
+    widget.style.overflow = "";
+    widget.style.overflowY = "auto";
+    setWidgetContentOpacity(widget, "1");
+  }
+
+  function showWidgetWithReveal(widget) {
+    if (!widget) {
+      return;
+    }
+
+    if (widget.dataset.isRevealing === "true") {
+      return;
+    }
+
+    clearWidgetRevealTimers();
+    widget.dataset.isRevealing = "true";
+
+    const finalWidth = Math.min(320, Math.max(window.innerWidth - 32, 12));
+    widget.style.display = "block";
+    widget.style.overflow = "hidden";
+    widget.style.overflowY = "hidden";
+    widget.style.width = "12px";
+    widget.style.height = "12px";
+    widget.style.padding = "0";
+    widget.style.borderRadius = "999px";
+    widget.style.transition = "width 0.3s ease, height 0.3s ease, padding 0.3s ease, border-radius 0.3s ease";
+    setWidgetContentOpacity(widget, "0");
+
+    widgetRevealWidthTimerId = window.setTimeout(() => {
+      widget.style.width = `${finalWidth}px`;
+      widget.style.borderRadius = "20px";
+    }, 300);
+
+    widgetRevealHeightTimerId = window.setTimeout(() => {
+      const finalHeight = Math.min(widget.scrollHeight, 500);
+      widget.style.height = `${Math.max(finalHeight, 12)}px`;
+      widget.style.padding = "12px";
+      widget.style.borderRadius = "12px";
+      setWidgetContentOpacity(widget, "1");
+    }, 600);
+
+    widgetRevealFinalizeTimerId = window.setTimeout(() => {
+      widget.dataset.isRevealing = "false";
+      widget.style.height = "";
+      widget.style.transition = "";
+      widget.style.overflow = "";
+      widget.style.overflowY = "auto";
+      clearWidgetRevealTimers();
+    }, 950);
+  }
+
   function updateDndButtonVisual() {
     const dndBtn = document.getElementById(`${WIDGET_ID}-dnd-btn`);
     if (!dndBtn) {
@@ -934,7 +1145,7 @@
 
     if (isDndMode) {
       isDndPreview = false;
-      widget.style.display = "none";
+      resetWidgetRevealState(widget);
       isWidgetVisible = false;
       setDotVisible(true);
     } else {
@@ -1026,11 +1237,11 @@
       e.stopPropagation();
       isDndPreview = false;
       if (isDndMode) {
-        wrapper.style.display = "none";
+        resetWidgetRevealState(wrapper);
         isWidgetVisible = false;
         setDotVisible(true);
       } else {
-        wrapper.style.display = "none";
+        resetWidgetRevealState(wrapper);
         isWidgetVisible = false;
       }
       console.log(`[Recall Widget] Widget closed`);
@@ -1355,7 +1566,7 @@
 
         isDndPreview = true;
         setDotVisible(false);
-        wrapper.style.display = "block";
+        showWidgetWithReveal(wrapper);
         isWidgetVisible = true;
       }, 450);
     });
@@ -1370,7 +1581,7 @@
         return;
       }
       isDndPreview = false;
-      wrapper.style.display = "none";
+      resetWidgetRevealState(wrapper);
       isWidgetVisible = false;
       setDotVisible(true);
     });
@@ -1567,19 +1778,20 @@
     showSkeleton();
     applyBodyAnimation();
 
+    const wasWidgetVisible = isWidgetVisible;
+
     if (!cards.length) {
-      widget.style.display = "none";
+      resetWidgetRevealState(widget);
       isWidgetVisible = false;
       setDotVisible(false);
       return;
     }
 
     if (isDndMode && !isDndPreview) {
-      widget.style.display = "none";
+      resetWidgetRevealState(widget);
       isWidgetVisible = false;
       setDotVisible(true);
     } else {
-      widget.style.display = "block";
       isWidgetVisible = true;
       setDotVisible(false);
     }
@@ -1930,23 +2142,33 @@
     if (resourceBtns.hasChildNodes()) {
       footer.appendChild(resourceBtns);
     }
+
+    if (!isDndMode || isDndPreview) {
+      if (!wasWidgetVisible) {
+        showWidgetWithReveal(widget);
+      } else {
+        widget.style.display = "block";
+      }
+    }
   }
 
   async function triggerOnIdle() {
     if (!cards.length) {
-      const widget = document.getElementById(WIDGET_ID);
-      if (widget) {
-        widget.style.display = "none";
-      }
-      isWidgetVisible = false;
+      hideWidgetUntilQueueRefresh();
+      return;
+    }
+
+    if (queueCompleted) {
+      hideWidgetUntilQueueRefresh();
       return;
     }
 
     if (currentCardInteracted) {
       // User already answered — advance to next card before showing
-      index = (index + 1) % cards.length;
-      cardState = {};
-      currentCardInteracted = false;
+      const hasNextCard = advanceToNextUnansweredCard();
+      if (!hasNextCard) {
+        return;
+      }
       console.log(`[Recall Widget] Advancing to card ${index + 1}/${cards.length}`);
     } else if (isWidgetVisible) {
       console.log("[Recall Widget] Idle trigger ignored: waiting for current card interaction");
@@ -2032,23 +2254,38 @@
   }
 
   function setCards(nextCards) {
+    clearDueQueueRefreshTimer();
+
     allCardsForLogging = Array.isArray(nextCards)
       ? nextCards.filter((card) => card && (card.question || card.content))
       : [];
 
-    // Filter to only due cards using SM-2 state
-    // Falls back to showing all cards if SM-2 state is empty (e.g. before calibration)
+    // Queue only due cards using SM-2 state (nextReview <= now).
     const dueCards = widgetGetDueCards(allCardsForLogging, sm2State);
-    cards = dueCards.length > 0 ? dueCards : allCardsForLogging;
+    const now = Date.now();
+
+    cards = dueCards.slice().sort((leftCard, rightCard) => {
+      const leftNextReview = leftCard?._id ? sm2State[leftCard._id]?.nextReview : null;
+      const rightNextReview = rightCard?._id ? sm2State[rightCard._id]?.nextReview : null;
+      const leftMinutes = leftNextReview == null ? 0 : Math.round((new Date(leftNextReview).getTime() - now) / 60000);
+      const rightMinutes = rightNextReview == null ? 0 : Math.round((new Date(rightNextReview).getTime() - now) / 60000);
+      return leftMinutes - rightMinutes;
+    });
     logAllCardIntervals(allCardsForLogging, sm2State);
 
     index = 0;
+    completedQueueCardKeys = new Set();
+    queueCompleted = false;
     cardState = {};
     pendingWrongAnswer = false;
     currentCardInteracted = false;
     idleTriggered = false;
     lastUserActivityAt = Date.now();
     startIdleMonitor();
+
+    if (!cards.length) {
+      scheduleDueQueueRefresh();
+    }
   }
 
   function loadCardsFromStorage() {
@@ -2116,6 +2353,10 @@
       if (changes["recallSM2State"]) {
         sm2State = changes["recallSM2State"].newValue || {};
         logAllCardIntervals(allCardsForLogging, sm2State);
+
+        if (!cards.length || queueCompleted) {
+          scheduleDueQueueRefresh();
+        }
       }
 
       if (changes[STORAGE_KEY]) {

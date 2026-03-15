@@ -681,6 +681,30 @@ async function saveResultToStorage(payload) {
   await Promise.all(promises);
 }
 
+function mergeCardsById(existingCards, incomingCards) {
+  const merged = new Map();
+
+  (Array.isArray(existingCards) ? existingCards : []).forEach((card) => {
+    if (!card) {
+      return;
+    }
+
+    const cardKey = card._id || `${card.sourceId || ""}:${card.type || ""}:${card.question || card.content || ""}`;
+    merged.set(cardKey, card);
+  });
+
+  (Array.isArray(incomingCards) ? incomingCards : []).forEach((card) => {
+    if (!card) {
+      return;
+    }
+
+    const cardKey = card._id || `${card.sourceId || ""}:${card.type || ""}:${card.question || card.content || ""}`;
+    merged.set(cardKey, card);
+  });
+
+  return Array.from(merged.values());
+}
+
 async function loadFromStorage(keys) {
   const data = {};
   const promises = keys.map(async (key) => {
@@ -915,16 +939,31 @@ async function runProgressSimulation() {
     topic,
     sourceId: String(sourceId),
   }));
+  const { recallCards: existingCards } = await loadFromStorage(["recallCards"]);
+  const mergedCards = mergeCardsById(existingCards, annotatedCards);
+  const sm2State = await loadSM2State();
+
+  annotatedCards.forEach((card) => {
+    if (!card?._id || sm2State[card._id]) {
+      return;
+    }
+
+    sm2State[card._id] = {
+      ...sm2DefaultState(),
+      sourceId: String(sourceId),
+    };
+  });
 
   await saveResultToStorage({
     recallLastSourceId: sourceId,
-    recallCards: annotatedCards,
+    recallCards: mergedCards,
     recallTopic: topic,
     recallExamDate: examDate,
     recallCalibrationCompleted: false,
   });
 
-  await saveWidgetCards(annotatedCards);
+  await saveWidgetCards(mergedCards);
+  await saveSM2State(sm2State);
 
   await setLocalExtensionStorage({
     recallExamDate: examDate,
