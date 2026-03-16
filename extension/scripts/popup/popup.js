@@ -48,63 +48,18 @@ const quizNextBtn = document.getElementById("quizNextBtn");
 
 const API_BASE_URL = "http://localhost:3000/api";
 
-// SM-2 helpers
-
-function sm2GetNextInterval(repetitions, easeFactor, prevInterval, quality) {
-  if (quality < 3) return 600000; // 10 min reset
-  switch (repetitions) {
-    case 0: return 600000; // 10 minutes
-    case 1: return 3600000; // 1 hour
-    case 2: return 28800000; // 8 hours
-    case 3: return 86400000; // 1 day
-    default: return Math.round(prevInterval * easeFactor);
-  }
-}
-
-function sm2Calculate(cardState, quality) {
-  let { easeFactor, repetitions, interval, stability } = cardState;
-  const qualityHistory = Array.isArray(cardState.qualityHistory)
-    ? cardState.qualityHistory.slice(-9)
-    : [];
-
-  if (quality >= 3) {
-    interval = sm2GetNextInterval(repetitions, easeFactor, interval, quality);
-    repetitions += 1;
-    stability = stability * (1 + 0.5 * quality / 5);
-  } else {
-    repetitions = 0;
-    interval = 600000;
-    stability = Math.max(1, stability * 0.5);
-  }
-
-  easeFactor = Math.max(
-    1.3,
-    easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
-  );
-
-  return {
-    easeFactor,
-    repetitions,
-    interval,
-    stability,
-    nextReview: new Date(Date.now() + interval).toISOString(),
-    lastReviewed: new Date().toISOString(),
-    lastQuality: quality,
-    qualityHistory: [...qualityHistory, { quality, reviewedAt: new Date().toISOString() }],
-  };
-}
-
-function sm2DefaultState() {
-  return {
-    easeFactor: 2.5,
-    repetitions: 0,
-    interval: 600000,
-    stability: 1,
-    nextReview: new Date().toISOString(),
-    lastReviewed: null,
-    qualityHistory: [],
-  };
-}
+const { sm2Calculate, sm2DefaultState } = window.RecallSM2 || {};
+const {
+  saveToIndexedDB,
+  getFromIndexedDB,
+  removeFromIndexedDB,
+  clearAllIndexedDB,
+  setLocalExtensionStorage,
+  getLocalExtensionStorage,
+  removeLocalExtensionStorage,
+  saveWidgetCards,
+} = window.RecallStorage || {};
+const { normalizeAnswer, normalizeText, fuzzyMatch } = window.RecallTextUtils || {};
 
 async function loadSM2State() {
   const result = await getLocalExtensionStorage(["recallSM2State"]);
@@ -113,149 +68,6 @@ async function loadSM2State() {
 
 async function saveSM2State(sm2State) {
   await setLocalExtensionStorage({ recallSM2State: sm2State });
-}
-
-// IndexedDB Helper
-const DB_NAME = "RecallExtensionDB";
-const DB_VERSION = 1;
-const STORE_NAME = "recallStore";
-
-let dbInstance = null;
-
-function openDB() {
-  return new Promise((resolve, reject) => {
-    if (dbInstance) {
-      resolve(dbInstance);
-      return;
-    }
-
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => {
-      dbInstance = request.result;
-      resolve(dbInstance);
-    };
-
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
-    };
-  });
-}
-
-async function saveToIndexedDB(key, value) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], "readwrite");
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.put(value, key);
-
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function getFromIndexedDB(key) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], "readonly");
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.get(key);
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function removeFromIndexedDB(key) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], "readwrite");
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.delete(key);
-
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function setLocalExtensionStorage(entries) {
-  if (!chrome || !chrome.storage || !chrome.storage.local) {
-    return;
-  }
-
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.set(entries, () => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
-        return;
-      }
-      resolve();
-    });
-  });
-}
-
-async function getLocalExtensionStorage(keys) {
-  if (!chrome || !chrome.storage || !chrome.storage.local) {
-    return {};
-  }
-
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.get(keys, (result) => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
-        return;
-      }
-      resolve(result || {});
-    });
-  });
-}
-
-async function removeLocalExtensionStorage(keys) {
-  if (!chrome || !chrome.storage || !chrome.storage.local) {
-    return;
-  }
-
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.remove(keys, () => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
-        return;
-      }
-      resolve();
-    });
-  });
-}
-
-async function saveWidgetCards(cards) {
-  if (!chrome || !chrome.storage || !chrome.storage.local) {
-    return;
-  }
-
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.set({ recallWidgetCards: cards || [] }, () => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
-        return;
-      }
-      resolve();
-    });
-  });
-}
-
-async function clearAllIndexedDB() {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction([STORE_NAME], "readwrite");
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.clear();
-
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-  });
 }
 
 // Debug helper - available globally via console
@@ -809,55 +621,6 @@ function renderCurrentCard() {
       quizAnswerInput.value = "";
     }
   }
-}
-
-function normalizeAnswer(value) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function normalizeText(value) {
-  return normalizeAnswer(value);
-}
-
-function levenshtein(a, b) {
-  const m = a.length;
-  const n = b.length;
-  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-
-  for (let i = 0; i <= m; i += 1) {
-    dp[i][0] = i;
-  }
-
-  for (let j = 0; j <= n; j += 1) {
-    dp[0][j] = j;
-  }
-
-  for (let i = 1; i <= m; i += 1) {
-    for (let j = 1; j <= n; j += 1) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + cost,
-      );
-    }
-  }
-
-  return dp[m][n];
-}
-
-function fuzzyMatch(userAns, correctAns) {
-  const a = normalizeAnswer(userAns || "");
-  const b = normalizeAnswer(correctAns || "");
-
-  if (!a || !b) {
-    return false;
-  }
-
-  const dist = levenshtein(a, b);
-  const maxLen = Math.max(a.length, b.length);
-  const similarity = 1 - (dist / maxLen);
-  return similarity >= 0.8;
 }
 
 async function semanticMatch(question, userAnswer, expectedAnswer) {

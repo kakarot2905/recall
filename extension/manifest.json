@@ -6,7 +6,7 @@
   "permissions": ["storage", "activeTab", "identity"],
   "host_permissions": ["http://localhost:3000/*"],
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "popup/popup.html",
     "default_title": "Recall - Study Smarter"
   },
   "oauth2": {
@@ -16,7 +16,14 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content-widget.js"],
+      "js": [
+        "scripts/widget/widget-shared.js",
+        "scripts/widget/widget-runtime.js",
+        "scripts/widget/widget-storage.js",
+        "scripts/widget/widget-ui.js",
+        "scripts/widget/widget-card-render-helpers.js",
+        "scripts/widget/content-widget.js"
+      ],
       "run_at": "document_idle"
     }
   ]

@@ -3,82 +3,16 @@ import Source from '../models/Source.js';
 import Card from '../models/Card.js';
 import { runAgents } from '../agents/agents.js';
 import { authMiddleware } from '../middleware/auth.js';
+import {
+    CARD_TYPES,
+    toTrimmedString,
+    parseOptionalExamDate,
+    normalizeCardPayload,
+    buildCardUpdate,
+    validateNormalizedCardPayload
+} from './sources.helpers.js';
 
 const router = express.Router();
-
-const CARD_TYPES = new Set(['mcq', 'short_answer', 'fill_blank', 'fact']);
-
-function toTrimmedString(value) {
-    return typeof value === 'string' ? value.trim() : '';
-}
-
-function parseOptionalExamDate(value) {
-    if (!value) {
-        return null;
-    }
-
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) {
-        return null;
-    }
-
-    return parsed;
-}
-
-function normalizeCardPayload(body) {
-    const type = toTrimmedString(body.type);
-    const question = toTrimmedString(body.question);
-    const content = toTrimmedString(body.content);
-    const correct = toTrimmedString(body.correct);
-    const answer = toTrimmedString(body.answer) || correct;
-    const difficultyNum = Number(body.difficulty);
-    const difficulty = Number.isFinite(difficultyNum) ? Math.max(1, Math.min(5, Math.round(difficultyNum))) : 3;
-    const options = Array.isArray(body.options)
-        ? body.options.map((option) => toTrimmedString(option)).filter(Boolean)
-        : toTrimmedString(body.options)
-            ? toTrimmedString(body.options).split(',').map((option) => option.trim()).filter(Boolean)
-            : [];
-
-    return {
-        type,
-        question,
-        content,
-        correct,
-        answer,
-        difficulty,
-        options,
-        youtubeQuery: toTrimmedString(body.youtubeQuery),
-        googleQuery: toTrimmedString(body.googleQuery)
-    };
-}
-
-function buildCardUpdate(normalized) {
-    const update = {
-        type: normalized.type,
-        question: normalized.question || undefined,
-        content: normalized.content || undefined,
-        correct: normalized.correct || undefined,
-        answer: normalized.answer || undefined,
-        difficulty: normalized.difficulty,
-        youtubeQuery: normalized.youtubeQuery || undefined,
-        googleQuery: normalized.googleQuery || undefined
-    };
-
-    if (normalized.options.length) {
-        update.options = normalized.options;
-    } else {
-        update.options = undefined;
-    }
-
-    if (normalized.type === 'fact') {
-        update.question = undefined;
-        update.correct = undefined;
-        update.answer = undefined;
-        update.options = undefined;
-    }
-
-    return update;
-}
 
 /**
  * GET /api/dashboard-data
@@ -370,16 +304,9 @@ router.post('/sources/:sourceId/cards', authMiddleware, async (req, res) => {
         }
 
         const normalized = normalizeCardPayload(req.body);
-        if (!CARD_TYPES.has(normalized.type)) {
-            return res.status(400).json({ error: 'Invalid card type' });
-        }
-
-        if (normalized.type === 'fact' && !normalized.content) {
-            return res.status(400).json({ error: 'Fact cards require content' });
-        }
-
-        if (normalized.type !== 'fact' && !normalized.question) {
-            return res.status(400).json({ error: 'This card type requires a question' });
+        const validationError = validateNormalizedCardPayload(normalized);
+        if (validationError) {
+            return res.status(400).json({ error: validationError });
         }
 
         const cardData = buildCardUpdate(normalized);
@@ -426,16 +353,9 @@ router.put('/cards/:cardId', authMiddleware, async (req, res) => {
             googleQuery: typeof req.body.googleQuery === 'undefined' ? card.googleQuery : req.body.googleQuery
         });
 
-        if (!CARD_TYPES.has(normalized.type)) {
-            return res.status(400).json({ error: 'Invalid card type' });
-        }
-
-        if (normalized.type === 'fact' && !normalized.content) {
-            return res.status(400).json({ error: 'Fact cards require content' });
-        }
-
-        if (normalized.type !== 'fact' && !normalized.question) {
-            return res.status(400).json({ error: 'This card type requires a question' });
+        const validationError = validateNormalizedCardPayload(normalized);
+        if (validationError) {
+            return res.status(400).json({ error: validationError });
         }
 
         const update = buildCardUpdate(normalized);

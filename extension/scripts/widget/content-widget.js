@@ -7,46 +7,41 @@
   const DND_MODE_STORAGE_KEY = "recallWidgetDndMode";
   const IDLE_THRESHOLD_MS = 5000;
   const IDLE_CHECK_MS = 500;
-  const DASHBOARD_SYNC_EVENT = "RECALL_SYNC_WIDGET_CARDS";
-
-  function hashTopicColor(topic) {
-    let hash = 5381;
-    const value = String(topic || "");
-
-    for (let index = 0; index < value.length; index += 1) {
-      hash = ((hash << 5) + hash) + value.charCodeAt(index);
-    }
-
-    const hue = Math.abs(hash) % 361;
-    return `hsl(${hue}, 55%, 68%)`;
-  }
-
-  function getTimeOfDay() {
-    const hour = new Date().getHours();
-
-    if (hour <= 8) {
-      return "early";
-    }
-
-    if (hour >= 22) {
-      return "late";
-    }
-
-    return "day";
-  }
-
-  function getDaysUntilExam(examDate) {
-    if (!examDate) {
-      return null;
-    }
-
-    const examTimestamp = new Date(examDate).getTime();
-    if (Number.isNaN(examTimestamp)) {
-      return null;
-    }
-
-    return Math.ceil((examTimestamp - Date.now()) / 86400000);
-  }
+  const {
+    DASHBOARD_SYNC_EVENT,
+    LOCAL_SNAPSHOT_REQUEST_EVENT,
+    LOCAL_SNAPSHOT_REPLY_EVENT,
+    LOCAL_SNAPSHOT_STORAGE_KEYS,
+    DASHBOARD_BOOTSTRAP_STORAGE_KEYS,
+    normalizeAnswer,
+    fuzzyMatch,
+    semanticMatch,
+    lerpColor,
+    clampPosition,
+  } = window.RecallWidgetRuntime || {};
+  const {
+    createOptionButton: createWidgetOptionButton,
+    createInputButton: createWidgetInputButton,
+  } = window.RecallWidgetUi || {};
+  const {
+    ensureCardEffectsStyle,
+    applyBodyAnimation: applyWidgetBodyAnimation,
+    bindBodyHoverAnimation,
+    applyExamSpeed,
+    showSkeleton,
+    hideSkeleton,
+    buildResourceButtons,
+  } = window.RecallWidgetCardRenderHelpers || {};
+  const { createStorageApi } = window.RecallWidgetStorage || {};
+  const {
+    hashTopicColor,
+    getTimeOfDay,
+    getDaysUntilExam,
+    widgetSM2Calculate,
+    widgetSM2Default,
+    widgetGetDueCards,
+    getQueueCardKey,
+  } = window.RecallWidgetShared || {};
 
   function loadSM2StateLocal() {
     return new Promise((resolve) => {
@@ -117,7 +112,6 @@
   let currentCardInteracted = false;
   let isDndMode = false;
   let isDndPreview = false;
-  let hasInvalidatedContext = false;
   let storageChangeListener = null;
   let pendingWrongAnswer = false;
   let firstCorrectFiredThisSession = false;
@@ -132,87 +126,26 @@
   let widgetRevealHeightTimerId = null;
   let widgetRevealFinalizeTimerId = null;
 
-  // SM-2 helpers (client-side, no network)
+  const storageApi = typeof createStorageApi === "function"
+    ? createStorageApi((error) => {
+      if (idleTimerId) {
+        clearInterval(idleTimerId);
+        idleTimerId = null;
+      }
 
-  function widgetSM2GetNextInterval(repetitions, easeFactor, prevInterval, quality) {
-    if (quality < 3) return 600000;
-    switch (repetitions) {
-      case 0: return 600000;
-      case 1: return 3600000;
-      case 2: return 28800000;
-      case 3: return 86400000;
-      default: return Math.round(prevInterval * easeFactor);
+      console.warn("[Recall Widget] Extension context invalidated. Widget automation disabled until the page reloads.", error);
+    })
+    : null;
+  const isContextInvalidationError = storageApi?.isContextInvalidationError
+    || ((error) => Boolean(error && typeof error.message === "string" && error.message.includes("Extension context invalidated")));
+  const isExtensionContextValid = storageApi?.isContextValid || (() => false);
+  const safeStorageGet = storageApi?.safeGet || ((keys, fallbackValue, callback) => callback(fallbackValue));
+  const safeStorageSet = storageApi?.safeSet || ((items, callback) => {
+    if (typeof callback === "function") {
+      callback(false);
     }
-  }
-
-  function widgetSM2Calculate(cardState, quality) {
-    let { easeFactor, repetitions, interval, stability } = cardState;
-    const reviewedAt = new Date().toISOString();
-    const qualityHistory = Array.isArray(cardState.qualityHistory)
-      ? cardState.qualityHistory.slice(-9)
-      : [];
-
-    if (quality >= 3) {
-      interval = widgetSM2GetNextInterval(repetitions, easeFactor, interval, quality);
-      repetitions += 1;
-      stability = stability * (1 + 0.5 * quality / 5);
-    } else {
-      repetitions = 0;
-      interval = 600000;
-      stability = Math.max(1, stability * 0.5);
-    }
-
-    easeFactor = Math.max(
-      1.3,
-      easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
-    );
-
-    return {
-      easeFactor,
-      repetitions,
-      interval,
-      stability,
-      lastQuality: quality,
-      qualityHistory: [
-        ...qualityHistory,
-        {
-          quality,
-          reviewedAt,
-        },
-      ],
-      nextReview: new Date(Date.now() + interval).toISOString(),
-      lastReviewed: reviewedAt,
-    };
-  }
-
-  function widgetSM2Default() {
-    return {
-      easeFactor: 2.5,
-      repetitions: 0,
-      interval: 600000,
-      stability: 1,
-      nextReview: new Date().toISOString(),
-      lastReviewed: null,
-    };
-  }
-
-  function widgetGetDueCards(cards, sm2State) {
-    const now = Date.now();
-    return cards.filter((card) => {
-      const state = sm2State[card._id];
-      // No SM-2 state yet means card is due immediately
-      if (!state || !state.nextReview) return true;
-      return new Date(state.nextReview).getTime() <= now;
-    });
-  }
-
-  function getQueueCardKey(card, fallbackIndex) {
-    if (!card) {
-      return `unknown-${fallbackIndex}`;
-    }
-
-    return card._id || `${card.type || "card"}:${card.sourceId || "unknown"}:${fallbackIndex}`;
-  }
+  });
+  const isChromeStorageAvailable = storageApi?.isAvailable || (() => false);
 
   function hideWidgetUntilQueueRefresh() {
     const widget = document.getElementById(WIDGET_ID);
@@ -459,93 +392,6 @@
     console.table(rows);
   }
 
-  function normalizeAnswer(text) {
-    return text.toLowerCase().trim();
-  }
-
-  function levenshtein(a, b) {
-    const m = a.length;
-    const n = b.length;
-    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
-
-    for (let i = 0; i <= m; i += 1) {
-      dp[i][0] = i;
-    }
-
-    for (let j = 0; j <= n; j += 1) {
-      dp[0][j] = j;
-    }
-
-    for (let i = 1; i <= m; i += 1) {
-      for (let j = 1; j <= n; j += 1) {
-        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-        dp[i][j] = Math.min(
-          dp[i - 1][j] + 1,
-          dp[i][j - 1] + 1,
-          dp[i - 1][j - 1] + cost,
-        );
-      }
-    }
-
-    return dp[m][n];
-  }
-
-  function fuzzyMatch(userAns, correctAns) {
-    const a = normalizeAnswer(userAns || "");
-    const b = normalizeAnswer(correctAns || "");
-
-    if (!a || !b) {
-      return false;
-    }
-
-    const dist = levenshtein(a, b);
-    const maxLen = Math.max(a.length, b.length);
-    const similarity = 1 - (dist / maxLen);
-    return similarity >= 0.8;
-  }
-
-  async function semanticMatch(question, userAnswer, expectedAnswer) {
-    try {
-      const response = await fetch("http://localhost:3000/api/check-answer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, userAnswer, expectedAnswer }),
-      });
-
-      if (!response.ok) {
-        return false;
-      }
-
-      const data = await response.json();
-      return !!data.correct;
-    } catch {
-      return false;
-    }
-  }
-
-  function lerpColor(from, to, t) {
-    const normalizedT = Math.min(Math.max(t, 0), 1);
-    const parseHex = (hex) => {
-      const sanitized = hex.replace("#", "");
-      const normalizedHex = sanitized.length === 3
-        ? sanitized.split("").map((char) => char + char).join("")
-        : sanitized;
-
-      return {
-        r: parseInt(normalizedHex.slice(0, 2), 16),
-        g: parseInt(normalizedHex.slice(2, 4), 16),
-        b: parseInt(normalizedHex.slice(4, 6), 16),
-      };
-    };
-
-    const fromRgb = parseHex(from);
-    const toRgb = parseHex(to);
-    const r = Math.round(fromRgb.r + ((toRgb.r - fromRgb.r) * normalizedT));
-    const g = Math.round(fromRgb.g + ((toRgb.g - fromRgb.g) * normalizedT));
-    const b = Math.round(fromRgb.b + ((toRgb.b - fromRgb.b) * normalizedT));
-
-    return `rgb(${r}, ${g}, ${b})`;
-  }
 
   function fireParticleBurst(widget) {
     if (!widget) {
@@ -832,133 +678,6 @@
     body.style.opacity = "0";
 
     window.setTimeout(advance, durationMs);
-  }
-
-  function isContextInvalidationError(error) {
-    return Boolean(
-      error
-      && typeof error.message === "string"
-      && error.message.includes("Extension context invalidated")
-    );
-  }
-
-  function handleExtensionContextInvalidated(error) {
-    if (hasInvalidatedContext) {
-      return;
-    }
-
-    hasInvalidatedContext = true;
-    if (idleTimerId) {
-      clearInterval(idleTimerId);
-      idleTimerId = null;
-    }
-
-    console.warn("[Recall Widget] Extension context invalidated. Widget automation disabled until the page reloads.", error);
-  }
-
-  function isExtensionContextValid() {
-    if (hasInvalidatedContext) {
-      return false;
-    }
-
-    try {
-      return Boolean(
-        typeof chrome !== "undefined"
-        && chrome.runtime
-        && chrome.runtime.id
-        && chrome.storage
-        && chrome.storage.local
-      );
-    } catch (error) {
-      if (isContextInvalidationError(error)) {
-        handleExtensionContextInvalidated(error);
-      }
-      return false;
-    }
-  }
-
-  function getChromeRuntimeError() {
-    try {
-      if (typeof chrome === "undefined" || !chrome.runtime || !chrome.runtime.lastError) {
-        return null;
-      }
-
-      const error = new Error(chrome.runtime.lastError.message || "Chrome runtime error");
-      if (isContextInvalidationError(error)) {
-        handleExtensionContextInvalidated(error);
-      }
-
-      return error;
-    } catch (error) {
-      if (isContextInvalidationError(error)) {
-        handleExtensionContextInvalidated(error);
-      }
-      return error;
-    }
-  }
-
-  function safeStorageGet(keys, fallbackValue, callback) {
-    if (!isExtensionContextValid()) {
-      callback(fallbackValue);
-      return;
-    }
-
-    try {
-      chrome.storage.local.get(keys, (result) => {
-        const runtimeError = getChromeRuntimeError();
-        if (runtimeError) {
-          callback(fallbackValue);
-          return;
-        }
-
-        callback(result || fallbackValue);
-      });
-    } catch (error) {
-      if (isContextInvalidationError(error)) {
-        handleExtensionContextInvalidated(error);
-      }
-      callback(fallbackValue);
-    }
-  }
-
-  function safeStorageSet(items, callback) {
-    const onComplete = typeof callback === "function" ? callback : () => { };
-
-    if (!isExtensionContextValid()) {
-      onComplete(false);
-      return;
-    }
-
-    try {
-      chrome.storage.local.set(items, () => {
-        const runtimeError = getChromeRuntimeError();
-        if (runtimeError) {
-          onComplete(false);
-          return;
-        }
-
-        onComplete(true);
-      });
-    } catch (error) {
-      if (isContextInvalidationError(error)) {
-        handleExtensionContextInvalidated(error);
-      }
-      onComplete(false);
-    }
-  }
-
-  function isChromeStorageAvailable() {
-    return isExtensionContextValid();
-  }
-
-  function clampPosition(left, top, width, height) {
-    const maxLeft = Math.max(window.innerWidth - width, 0);
-    const maxTop = Math.max(window.innerHeight - height, 0);
-
-    return {
-      left: Math.min(Math.max(left, 0), maxLeft),
-      top: Math.min(Math.max(top, 0), maxTop),
-    };
   }
 
   function applyWidgetPosition(wrapper, left, top) {
@@ -1671,95 +1390,14 @@
     return wrapper;
   }
 
-  function createOptionButton(text, isCorrect, isSelected, onClickCallback, isDisabled = false) {
-    const widget = document.getElementById(WIDGET_ID);
-    const speed = parseFloat(widget?.style.getPropertyValue("--recall-anim-speed") || "1") || 1;
-    const btn = document.createElement("button");
-    btn.textContent = text;
-    btn.style.display = "block";
-    btn.style.width = "100%";
-    btn.style.padding = "8px";
-    btn.style.marginBottom = "6px";
-    btn.style.border = "1px solid #ddd";
-    btn.style.borderRadius = "6px";
-    btn.style.background = "#f5f5f5";
-    btn.style.color = "#333";
-    btn.style.cursor = "pointer";
-    btn.style.fontSize = "12px";
-    btn.style.transition = `all ${0.3 * speed}s`;
-    btn.style.fontFamily = "inherit";
-
-    if (isSelected) {
-      btn.style.border = "1px solid " + (isCorrect ? "#4CAF50" : "#f44336");
-      btn.style.background = isCorrect ? "#E8F5E9" : "#FFEBEE";
-      btn.style.color = isCorrect ? "#2E7D32" : "#C62828";
-      btn.style.fontWeight = "bold";
-      btn.disabled = true;
-    } else if (isDisabled) {
-      btn.style.opacity = "0.45";
-      btn.style.cursor = "not-allowed";
-      btn.disabled = true;
-    } else {
-      btn.onmouseover = () => {
-        btn.style.background = "#efefef";
-        btn.style.border = "1px solid #999";
-      };
-      btn.onmouseout = () => {
-        btn.style.background = "#f5f5f5";
-        btn.style.border = "1px solid #ddd";
-      };
-      btn.onclick = onClickCallback;
-    }
-
-    return btn;
-  }
-
-  function createInputButton(text, variant = "primary") {
-    const widget = document.getElementById(WIDGET_ID);
-    const speed = parseFloat(widget?.style.getPropertyValue("--recall-anim-speed") || "1") || 1;
-    const btn = document.createElement("button");
-    btn.textContent = text;
-    btn.style.padding = "6px 12px";
-    btn.style.margin = "4px";
-    btn.style.border = "1px solid #ddd";
-    btn.style.borderRadius = "4px";
-    btn.style.cursor = "pointer";
-    btn.style.fontSize = "12px";
-    btn.style.fontFamily = "inherit";
-    btn.style.transition = `all ${0.2 * speed}s`;
-
-    if (variant === "primary") {
-      btn.style.background = "#2196F3";
-      btn.style.color = "white";
-      btn.style.border = "1px solid #2196F3";
-    } else if (variant === "secondary") {
-      btn.style.background = "#f5f5f5";
-      btn.style.color = "#333";
-      btn.style.border = "1px solid #ddd";
-    }
-
-    btn.onmouseover = () => {
-      btn.style.opacity = "0.8";
-    };
-    btn.onmouseout = () => {
-      btn.style.opacity = "1";
-    };
-
-    return btn;
-  }
-
   function renderCurrentCard() {
     const widget = document.getElementById(WIDGET_ID);
     if (!widget) {
       return;
     }
 
-    const CARD_EFFECTS_STYLE_ID = "recall-widget-card-effects";
-    if (!document.getElementById(CARD_EFFECTS_STYLE_ID)) {
-      const cardEffectsStyle = document.createElement("style");
-      cardEffectsStyle.id = CARD_EFFECTS_STYLE_ID;
-      cardEffectsStyle.textContent = "@keyframes recallCardBreathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.003)} } @keyframes recallSkeletonShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }";
-      (document.head || document.documentElement).appendChild(cardEffectsStyle);
+    if (typeof ensureCardEffectsStyle === "function") {
+      ensureCardEffectsStyle();
     }
 
     const body = widget.querySelector(`#${WIDGET_ID}-body`);
@@ -1772,76 +1410,28 @@
       widget.style.setProperty("--recall-anim-speed", "1");
     }
 
-    const applyBodyAnimation = () => {
-      const speed = parseFloat(widget.style.getPropertyValue("--recall-anim-speed") || "1") || 1;
-      body.style.animation = widget.matches(":hover")
-        ? "none"
-        : `recallCardBreathe ${3 * speed}s ease-in-out infinite`;
-    };
-
-    if (!widget.dataset.recallCardHoverBound) {
-      widget.addEventListener("mouseenter", () => {
-        const nextBody = widget.querySelector(`#${WIDGET_ID}-body`);
-        if (nextBody) {
-          nextBody.style.animation = "none";
-        }
-      });
-      widget.addEventListener("mouseleave", () => {
-        const nextBody = widget.querySelector(`#${WIDGET_ID}-body`);
-        if (!nextBody) {
-          return;
-        }
-
-        const speed = parseFloat(widget.style.getPropertyValue("--recall-anim-speed") || "1") || 1;
-        nextBody.style.animation = `recallCardBreathe ${3 * speed}s ease-in-out infinite`;
-      });
-      widget.dataset.recallCardHoverBound = "true";
+    if (typeof bindBodyHoverAnimation === "function") {
+      bindBodyHoverAnimation(widget, WIDGET_ID);
     }
 
-    safeStorageGet(["recallExamDate"], {}, (result) => {
-      const daysUntilExam = getDaysUntilExam(result.recallExamDate || null);
-      widget.style.setProperty("--recall-anim-speed", daysUntilExam !== null && daysUntilExam >= 1 && daysUntilExam <= 7 ? "1.18" : "1");
-      applyBodyAnimation();
-    });
+    if (typeof applyExamSpeed === "function") {
+      applyExamSpeed(widget, WIDGET_ID, safeStorageGet, getDaysUntilExam);
+    } else {
+      safeStorageGet(["recallExamDate"], {}, (result) => {
+        const daysUntilExam = getDaysUntilExam(result.recallExamDate || null);
+        widget.style.setProperty("--recall-anim-speed", daysUntilExam !== null && daysUntilExam >= 1 && daysUntilExam <= 7 ? "1.18" : "1");
+        if (typeof applyWidgetBodyAnimation === "function") {
+          applyWidgetBodyAnimation(widget, WIDGET_ID);
+        }
+      });
+    }
 
-    const showSkeleton = () => {
-      const speed = parseFloat(widget.style.getPropertyValue("--recall-anim-speed") || "1") || 1;
-      const skeleton = document.createElement("div");
-      skeleton.id = `${WIDGET_ID}-skeleton`;
-      skeleton.style.display = "grid";
-      skeleton.style.gap = "8px";
-
-      const createSkeletonLine = (width) => {
-        const line = document.createElement("div");
-        line.style.width = width;
-        line.style.height = "12px";
-        line.style.borderRadius = "999px";
-        line.style.background = "linear-gradient(90deg, #eef2fb 25%, #f8faff 50%, #eef2fb 75%)";
-        line.style.backgroundSize = "200% 100%";
-        line.style.animation = `recallSkeletonShimmer ${1.35 * speed}s linear infinite`;
-        return line;
-      };
-
-      skeleton.appendChild(createSkeletonLine("100%"));
-      skeleton.appendChild(createSkeletonLine("72%"));
-
-      for (let index = 0; index < 4; index += 1) {
-        skeleton.appendChild(createSkeletonLine("80%"));
-      }
-
-      body.innerHTML = "";
-      body.appendChild(skeleton);
-    };
-
-    const hideSkeleton = () => {
-      const skeleton = body.querySelector(`#${WIDGET_ID}-skeleton`);
-      if (skeleton) {
-        skeleton.remove();
-      }
-    };
-
-    showSkeleton();
-    applyBodyAnimation();
+    if (typeof showSkeleton === "function") {
+      showSkeleton(body, widget);
+    }
+    if (typeof applyWidgetBodyAnimation === "function") {
+      applyWidgetBodyAnimation(widget, WIDGET_ID);
+    }
 
     const wasWidgetVisible = isWidgetVisible;
 
@@ -1878,7 +1468,9 @@
     body.innerHTML = "";
 
     if (!card) {
-      hideSkeleton();
+      if (typeof hideSkeleton === "function") {
+        hideSkeleton(body);
+      }
       body.textContent = "No card available.";
       footer.textContent = `${safeIndex + 1} / ${cards.length}`;
       return;
@@ -1892,7 +1484,9 @@
 
     // Render based on card type
     if (card.type === "ghost") {
-      hideSkeleton();
+      if (typeof hideSkeleton === "function") {
+        hideSkeleton(body);
+      }
       footer.innerHTML = "";
 
       const ghostDiv = document.createElement("div");
@@ -1912,7 +1506,9 @@
       body.appendChild(ghostDiv);
       return;
     } else if (card.type === "mcq") {
-      hideSkeleton();
+      if (typeof hideSkeleton === "function") {
+        hideSkeleton(body);
+      }
       const questionDiv = document.createElement("div");
       questionDiv.textContent = card.question;
       questionDiv.style.marginBottom = "10px";
@@ -1926,7 +1522,7 @@
         (card.options || []).forEach((option) => {
           const isCorrect = normalizeAnswer(option) === correctAnswer;
           const isSelected = isCorrect || normalizeAnswer(state.userAnswer || "") === normalizeAnswer(option);
-          const btn = createOptionButton(option, isCorrect, isSelected, () => { }, !isSelected);
+          const btn = createWidgetOptionButton(WIDGET_ID, option, isCorrect, isSelected, () => { }, !isSelected);
           body.appendChild(btn);
         });
 
@@ -1944,7 +1540,7 @@
       } else {
         // Show selectable options
         (card.options || []).forEach((option) => {
-          const btn = createOptionButton(option, false, false, (e) => {
+          const btn = createWidgetOptionButton(WIDGET_ID, option, false, false, (e) => {
             e.stopPropagation();
             const isCorrect = normalizeAnswer(option) === correctAnswer;
             if (!isCorrect) {
@@ -1972,7 +1568,7 @@
           body.appendChild(btn);
         });
 
-        const giveUpBtn = createInputButton("Give Up", "secondary");
+        const giveUpBtn = createWidgetInputButton(WIDGET_ID, "Give Up", "secondary");
         giveUpBtn.onclick = (e) => {
           e.stopPropagation();
           sessionGiveUpCount += 1;
@@ -1985,7 +1581,9 @@
         body.appendChild(giveUpBtn);
       }
     } else if (card.type === "fact") {
-      hideSkeleton();
+      if (typeof hideSkeleton === "function") {
+        hideSkeleton(body);
+      }
       const factDiv = document.createElement("div");
       factDiv.textContent = `Do you know: ${card.content}`;
       factDiv.style.marginBottom = "10px";
@@ -1993,7 +1591,7 @@
       body.appendChild(factDiv);
 
       if (!state.answered) {
-        const yesBtn = createInputButton("Yes", "primary");
+        const yesBtn = createWidgetInputButton(WIDGET_ID, "Yes", "primary");
         yesBtn.onclick = (e) => {
           e.stopPropagation();
           lastAnswerWasCorrect = true;
@@ -2004,7 +1602,7 @@
           animateAdvanceToNextCard(widget, card._id, true, 4);
         };
 
-        const noBtn = createInputButton("No", "secondary");
+        const noBtn = createWidgetInputButton(WIDGET_ID, "No", "secondary");
         noBtn.onclick = (e) => {
           e.stopPropagation();
           lastAnswerWasCorrect = false;
@@ -2029,7 +1627,9 @@
       }
     } else {
       // short_answer or fill_blank
-      hideSkeleton();
+      if (typeof hideSkeleton === "function") {
+        hideSkeleton(body);
+      }
       const questionDiv = document.createElement("div");
       questionDiv.textContent = card.question;
       questionDiv.style.marginBottom = "10px";
@@ -2065,7 +1665,7 @@
         input.style.fontFamily = "inherit";
         body.appendChild(input);
 
-        const submitBtn = createInputButton("Submit", "primary");
+        const submitBtn = createWidgetInputButton(WIDGET_ID, "Submit", "primary");
         let inputStartTime = null;
         let backspaceCount = 0;
 
@@ -2129,7 +1729,7 @@
           renderCurrentCard();
         };
 
-        const giveUpBtn = createInputButton("Give Up", "secondary");
+        const giveUpBtn = createWidgetInputButton(WIDGET_ID, "Give Up", "secondary");
         giveUpBtn.onclick = (e) => {
           e.stopPropagation();
           sessionGiveUpCount += 1;
@@ -2154,58 +1754,8 @@
     footerCounter.textContent = `${safeIndex + 1} / ${cards.length}`;
     footer.appendChild(footerCounter);
 
-    const resourceBtns = document.createElement("div");
-    resourceBtns.style.display = "flex";
-    resourceBtns.style.alignItems = "center";
-    resourceBtns.style.gap = "5px";
-
-    if (card.youtubeQuery) {
-      const ytBtn = document.createElement("a");
-      ytBtn.href = `https://www.youtube.com/results?search_query=${encodeURIComponent(card.youtubeQuery)}`;
-      ytBtn.target = "_blank";
-      ytBtn.rel = "noopener noreferrer";
-      ytBtn.title = `YouTube: ${card.youtubeQuery}`;
-      ytBtn.style.display = "inline-flex";
-      ytBtn.style.alignItems = "center";
-      ytBtn.style.justifyContent = "center";
-      ytBtn.style.width = "22px";
-      ytBtn.style.height = "22px";
-      ytBtn.style.borderRadius = "50%";
-      ytBtn.style.background = "#fff0f0";
-      ytBtn.style.border = "1px solid #f5c6c6";
-      ytBtn.style.color = "#c4302b";
-      ytBtn.style.textDecoration = "none";
-      ytBtn.style.flexShrink = "0";
-      ytBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>`;
-      ytBtn.onmouseover = () => (ytBtn.style.background = "#fddede");
-      ytBtn.onmouseout = () => (ytBtn.style.background = "#fff0f0");
-      resourceBtns.appendChild(ytBtn);
-    }
-
-    if (card.googleQuery) {
-      const gBtn = document.createElement("a");
-      gBtn.href = `https://www.google.com/search?q=${encodeURIComponent(card.googleQuery)}`;
-      gBtn.target = "_blank";
-      gBtn.rel = "noopener noreferrer";
-      gBtn.title = `Search: ${card.googleQuery}`;
-      gBtn.style.display = "inline-flex";
-      gBtn.style.alignItems = "center";
-      gBtn.style.justifyContent = "center";
-      gBtn.style.width = "22px";
-      gBtn.style.height = "22px";
-      gBtn.style.borderRadius = "50%";
-      gBtn.style.background = "#f0f4ff";
-      gBtn.style.border = "1px solid #c6d4f5";
-      gBtn.style.color = "#326fd1";
-      gBtn.style.textDecoration = "none";
-      gBtn.style.flexShrink = "0";
-      gBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
-      gBtn.onmouseover = () => (gBtn.style.background = "#dde8ff");
-      gBtn.onmouseout = () => (gBtn.style.background = "#f0f4ff");
-      resourceBtns.appendChild(gBtn);
-    }
-
-    if (resourceBtns.hasChildNodes()) {
+    const resourceBtns = typeof buildResourceButtons === "function" ? buildResourceButtons(card) : null;
+    if (resourceBtns) {
       footer.appendChild(resourceBtns);
     }
 
@@ -2443,9 +1993,6 @@
     }
   }
 
-  const LOCAL_SNAPSHOT_REQUEST_EVENT = "RECALL_REQUEST_LOCAL_SNAPSHOT";
-  const LOCAL_SNAPSHOT_REPLY_EVENT = "RECALL_LOCAL_SNAPSHOT";
-
   window.addEventListener("message", (event) => {
     if (event.origin !== window.location.origin) {
       return;
@@ -2454,24 +2001,7 @@
     const payload = event.data;
 
     if (payload && payload.type === LOCAL_SNAPSHOT_REQUEST_EVENT) {
-      const STORAGE_KEYS = [
-        "recallWidgetCards",
-        "recallSM2State",
-        "recallTodayStats",
-        "recallExamDate",
-        "recallLastSourceId",
-        "recallLastReviewedAt",
-        "recallLastOpenedAt",
-        "recallWidgetDndMode",
-        "recallAuthToken",
-        "recallUser",
-        "pulsedAt",
-        "ghostCardShown",
-        "seenFirstCardPerSource",
-        "recallTopicColors",
-      ];
-
-      safeStorageGet(STORAGE_KEYS, {}, (result) => {
+      safeStorageGet(LOCAL_SNAPSHOT_STORAGE_KEYS, {}, (result) => {
         window.postMessage(
           {
             type: LOCAL_SNAPSHOT_REPLY_EVENT,
@@ -2511,24 +2041,7 @@
   // dashboard receives data even if its request postMessage was sent before this
   // content script listener was registered (document_idle timing race).
   function maybePushLocalSnapshotToDashboard() {
-    const SNAPSHOT_KEYS = [
-      "recallWidgetCards",
-      "recallSM2State",
-      "recallTodayStats",
-      "recallExamDate",
-      "recallLastSourceId",
-      "recallLastReviewedAt",
-      "recallLastOpenedAt",
-      "recallWidgetDndMode",
-      "recallAuthToken",
-      "recallUser",
-      "pulsedAt",
-      "ghostCardShown",
-      "seenFirstCardPerSource",
-      "recallTopicColors",
-    ];
-
-    safeStorageGet(SNAPSHOT_KEYS, {}, (result) => {
+    safeStorageGet(DASHBOARD_BOOTSTRAP_STORAGE_KEYS, {}, (result) => {
       window.postMessage(
         {
           type: LOCAL_SNAPSHOT_REPLY_EVENT,
