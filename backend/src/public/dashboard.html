@@ -11,7 +11,7 @@
         --ink: #1d2433;
         --muted: #5e6678;
         --border: #d8deea;
-        --accent: #7a8cff;
+        --accent: #3e6cff;
         --ok: #2e8b57;
         --warn: #b06d00;
         --error: #b42318;
@@ -29,7 +29,7 @@
       }
 
       .layout {
-        max-width: 1200px;
+        max-width: 1280px;
         margin: 0 auto;
         padding: 24px;
       }
@@ -45,13 +45,17 @@
       .title {
         margin: 0;
         font-size: 28px;
-        letter-spacing: 0.2px;
       }
 
       .subtitle {
         margin: 4px 0 0;
         color: var(--muted);
         font-size: 14px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
       }
 
       .button {
@@ -61,6 +65,12 @@
         padding: 8px 12px;
         font-weight: 600;
         cursor: pointer;
+      }
+
+      .button-primary {
+        border-color: #c0cdfb;
+        background: #edf2ff;
+        color: #1f3eaa;
       }
 
       .button-danger {
@@ -87,9 +97,60 @@
         padding: 14px;
       }
 
+      .panel h2 {
+        margin: 0 0 8px;
+      }
+
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .form-grid-wide {
+        grid-column: span 2;
+      }
+
+      .field {
+        display: grid;
+        gap: 4px;
+      }
+
+      .field label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .field input,
+      .field textarea,
+      .field select {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 7px 8px;
+        font-size: 13px;
+        font-family: inherit;
+        background: #fff;
+        color: var(--ink);
+      }
+
+      .field textarea {
+        min-height: 66px;
+        resize: vertical;
+      }
+
       .sources {
         overflow: auto;
-        max-height: 340px;
+        max-height: 360px;
       }
 
       table {
@@ -103,6 +164,7 @@
         padding: 10px;
         border-bottom: 1px solid #edf0f7;
         font-size: 13px;
+        vertical-align: top;
       }
 
       th {
@@ -142,7 +204,7 @@
       .cards {
         display: grid;
         gap: 10px;
-        max-height: 420px;
+        max-height: 440px;
         overflow: auto;
       }
 
@@ -151,6 +213,13 @@
         border-radius: 10px;
         padding: 10px;
         background: #fcfdff;
+      }
+
+      .card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
       }
 
       .chip {
@@ -167,10 +236,154 @@
         color: var(--muted);
       }
 
-      @media (min-width: 900px) {
+      .json-view {
+        margin: 0;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid #d7dff2;
+        background: #f7f9ff;
+        max-height: 260px;
+        overflow: auto;
+        font-size: 12px;
+        line-height: 1.45;
+        white-space: pre;
+      }
+
+      @media (min-width: 1024px) {
         .panels {
           grid-template-columns: 1fr 1fr;
         }
+
+        .panel-full {
+          grid-column: 1 / -1;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .form-grid-wide {
+          grid-column: span 1;
+        }
+      }
+
+      /* ── Local Snapshot Organised View ───────────────────── */
+      .local-snapshot-view {
+        display: grid;
+        gap: 8px;
+        padding: 4px 0;
+      }
+
+      .snap-section {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .snap-section-title {
+        background: #f0f3fc;
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .snap-section-body {
+        padding: 6px 12px;
+      }
+
+      .snap-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 5px 0;
+        font-size: 13px;
+        border-bottom: 1px solid #f0f2f8;
+      }
+
+      .snap-row:last-child {
+        border-bottom: none;
+      }
+
+      .snap-indent {
+        padding-left: 20px;
+      }
+
+      .snap-key {
+        color: var(--muted);
+        font-size: 12px;
+        min-width: 140px;
+        flex-shrink: 0;
+      }
+
+      .snap-val {
+        font-size: 13px;
+      }
+
+      .snap-mono {
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 12px;
+      }
+
+      .snap-muted {
+        opacity: 0.55;
+      }
+
+      .snap-empty {
+        color: var(--muted);
+        font-size: 13px;
+        font-style: italic;
+        padding: 4px 0;
+      }
+
+      .snap-ts {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      .snap-color-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+        border: 1px solid rgba(0,0,0,0.15);
+      }
+
+      .snap-details summary {
+        font-size: 12px;
+        color: var(--accent);
+        cursor: pointer;
+        padding: 5px 0;
+        user-select: none;
+      }
+
+      .snap-list {
+        margin: 6px 0 4px;
+        display: grid;
+        gap: 4px;
+      }
+
+      .snap-list-item {
+        font-size: 12px;
+        padding: 5px 8px;
+        background: #f7f9ff;
+        border-radius: 6px;
+        border: 1px solid #e5ecff;
+        word-break: break-word;
+      }
+
+      .snap-status-msg {
+        font-size: 13px;
+        color: var(--muted);
+        padding: 16px 0;
+        text-align: center;
       }
     </style>
   </head>
@@ -179,15 +392,38 @@
       <header class="header">
         <div>
           <h1 class="title">Recall Data Dashboard</h1>
-          <p class="subtitle">See generated sources, statuses, and cards.</p>
+          <p class="subtitle" id="userSummary">Manage all source and card data saved for your account.</p>
         </div>
-        <button class="button" id="refreshBtn" type="button">Refresh</button>
+        <div class="actions">
+          <button class="button" id="refreshBtn" type="button">Refresh</button>
+        </div>
       </header>
 
       <div class="panels">
         <section class="panel">
-          <h2>Sources</h2>
-          <p class="muted" id="sourceSummary">Loading sources...</p>
+          <div class="toolbar">
+            <h2>Sources</h2>
+            <p class="muted" id="sourceSummary">Loading sources...</p>
+          </div>
+
+          <form id="addSourceForm" class="form-grid">
+            <div class="field">
+              <label for="newSourceTopic">Topic</label>
+              <input id="newSourceTopic" required placeholder="e.g. Data Structures" />
+            </div>
+            <div class="field">
+              <label for="newSourceExamDate">Exam Date</label>
+              <input id="newSourceExamDate" type="date" />
+            </div>
+            <div class="field form-grid-wide">
+              <label for="newSourceNotes">Notes</label>
+              <textarea id="newSourceNotes" placeholder="Optional notes"></textarea>
+            </div>
+            <div>
+              <button type="submit" class="button button-primary">Add Source</button>
+            </div>
+          </form>
+
           <div class="sources">
             <table>
               <thead>
@@ -195,8 +431,8 @@
                   <th>Topic</th>
                   <th>Status</th>
                   <th>Cards</th>
-                  <th>Created</th>
-                  <th>Action</th>
+                  <th>Exam</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="sourcesBody"></tbody>
@@ -205,9 +441,71 @@
         </section>
 
         <section class="panel">
-          <h2>Cards</h2>
-          <p class="muted" id="cardsSummary">Pick a source to view cards.</p>
+          <div class="toolbar">
+            <h2>Cards</h2>
+            <p class="muted" id="cardsSummary">Pick a source to manage cards.</p>
+          </div>
+
+          <form id="addCardForm" class="form-grid">
+            <div class="field">
+              <label for="newCardType">Type</label>
+              <select id="newCardType">
+                <option value="mcq">mcq</option>
+                <option value="short_answer">short_answer</option>
+                <option value="fill_blank">fill_blank</option>
+                <option value="fact">fact</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="newCardDifficulty">Difficulty (1-5)</label>
+              <input id="newCardDifficulty" type="number" min="1" max="5" value="3" />
+            </div>
+            <div class="field form-grid-wide">
+              <label for="newCardQuestion">Question / Prompt</label>
+              <textarea id="newCardQuestion" placeholder="Question for mcq/short/fill"></textarea>
+            </div>
+            <div class="field form-grid-wide">
+              <label for="newCardContent">Content (for fact card)</label>
+              <textarea id="newCardContent" placeholder="Fact text"></textarea>
+            </div>
+            <div class="field">
+              <label for="newCardAnswer">Answer / Correct</label>
+              <input id="newCardAnswer" placeholder="Correct answer" />
+            </div>
+            <div class="field">
+              <label for="newCardOptions">Options CSV (mcq)</label>
+              <input id="newCardOptions" placeholder="A, B, C, D" />
+            </div>
+            <div class="field">
+              <label for="newCardYoutube">YouTube Query</label>
+              <input id="newCardYoutube" placeholder="Optional" />
+            </div>
+            <div class="field">
+              <label for="newCardGoogle">Google Query</label>
+              <input id="newCardGoogle" placeholder="Optional" />
+            </div>
+            <div>
+              <button type="submit" class="button button-primary">Add Card</button>
+            </div>
+          </form>
+
           <div class="cards" id="cardsContainer"></div>
+        </section>
+
+        <section class="panel panel-full">
+          <div class="toolbar">
+            <h2>Backend Data Snapshot</h2>
+            <p class="muted">Live JSON from backend for this account</p>
+          </div>
+          <pre class="json-view" id="rawDataView">Loading...</pre>
+        </section>
+
+        <section class="panel panel-full">
+          <div class="toolbar">
+            <h2>Local Extension Storage Snapshot</h2>
+            <p class="muted" id="localSnapshotStatus">Requesting from extension content script...</p>
+          </div>
+          <div id="localDataView" class="local-snapshot-view"><p class="snap-status-msg">Waiting for content script&hellip;</p></div>
         </section>
       </div>
     </div>
@@ -217,7 +515,28 @@
       const cardsContainer = document.getElementById("cardsContainer");
       const sourceSummary = document.getElementById("sourceSummary");
       const cardsSummary = document.getElementById("cardsSummary");
+      const userSummary = document.getElementById("userSummary");
+      const rawDataView = document.getElementById("rawDataView");
+      const localDataView = document.getElementById("localDataView");
+      const localSnapshotStatus = document.getElementById("localSnapshotStatus");
       const refreshBtn = document.getElementById("refreshBtn");
+
+      const addSourceForm = document.getElementById("addSourceForm");
+      const addCardForm = document.getElementById("addCardForm");
+      const newSourceTopic = document.getElementById("newSourceTopic");
+      const newSourceNotes = document.getElementById("newSourceNotes");
+      const newSourceExamDate = document.getElementById("newSourceExamDate");
+
+      const newCardType = document.getElementById("newCardType");
+      const newCardDifficulty = document.getElementById("newCardDifficulty");
+      const newCardQuestion = document.getElementById("newCardQuestion");
+      const newCardContent = document.getElementById("newCardContent");
+      const newCardAnswer = document.getElementById("newCardAnswer");
+      const newCardOptions = document.getElementById("newCardOptions");
+      const newCardYoutube = document.getElementById("newCardYoutube");
+      const newCardGoogle = document.getElementById("newCardGoogle");
+
+      const DASHBOARD_SYNC_EVENT = "RECALL_SYNC_WIDGET_CARDS";
 
       const url = new URL(window.location.href);
       const tokenFromUrl = url.searchParams.get("token");
@@ -229,10 +548,11 @@
       }
 
       const dashboardToken = sessionStorage.getItem("recallDashboardToken");
-      const DASHBOARD_SYNC_EVENT = "RECALL_SYNC_WIDGET_CARDS";
 
       let selectedSourceId = "";
       let cachedSources = [];
+      let cachedCards = [];
+      let dashboardUser = null;
 
       async function api(path, options = {}) {
         const headers = {
@@ -252,6 +572,7 @@
         if (!response.ok) {
           throw new Error(data.error || "Request failed");
         }
+
         return data;
       }
 
@@ -272,6 +593,14 @@
         return date.toLocaleString();
       }
 
+      function formatDateInput(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return "";
+        }
+        return date.toISOString().slice(0, 10);
+      }
+
       function syncCardsToExtensionStorage(cards) {
         if (!Array.isArray(cards)) {
           return;
@@ -286,30 +615,43 @@
         );
       }
 
-      function renderSources(sources) {
-        cachedSources = sources;
-        sourceSummary.textContent = `${sources.length} source(s) found`;
+      function getCardsForSelectedSource() {
+        return cachedCards.filter((card) => String(card.sourceId) === String(selectedSourceId));
+      }
 
-        if (sources.length === 0) {
-          sourcesBody.innerHTML =
-            '<tr><td colspan="5" class="muted">No sources yet.</td></tr>';
-          cardsContainer.innerHTML = "";
-          cardsSummary.textContent = "No cards to show.";
+      function renderRawData() {
+        const payload = {
+          user: dashboardUser,
+          selectedSourceId,
+          sources: cachedSources,
+          cards: cachedCards,
+        };
+        rawDataView.textContent = JSON.stringify(payload, null, 2);
+      }
+
+      function renderSources() {
+        sourceSummary.textContent = `${cachedSources.length} source(s)`;
+
+        if (!cachedSources.length) {
+          sourcesBody.innerHTML = '<tr><td colspan="5" class="muted">No sources yet.</td></tr>';
           return;
         }
 
-        sourcesBody.innerHTML = sources
+        sourcesBody.innerHTML = cachedSources
           .map((source) => {
-            const isSelected =
-              source._id === selectedSourceId ? "selected" : "";
+            const isSelected = source._id === selectedSourceId ? "selected" : "";
             return `
-              <tr data-source-id="${source._id}" class="${isSelected}">
-                <td>${escapeHtml(source.topic)}</td>
-                <td><span class="status ${escapeHtml(source.status)}">${escapeHtml(source.status)}</span></td>
-                <td>${source.cardCount}</td>
-                <td>${escapeHtml(formatDate(source.createdAt))}</td>
+              <tr class="${isSelected}" data-source-id="${source._id}">
                 <td>
-                  <button type="button" class="button button-small button-danger" data-delete-source-id="${source._id}">Delete Topic</button>
+                  <div><strong>${escapeHtml(source.topic)}</strong></div>
+                  <div class="muted">${escapeHtml(source.notes || "")}</div>
+                </td>
+                <td><span class="status ${escapeHtml(source.status)}">${escapeHtml(source.status)}</span></td>
+                <td>${escapeHtml(source.cardCount || 0)}</td>
+                <td>${escapeHtml(formatDate(source.examDate))}</td>
+                <td>
+                  <button type="button" class="button button-small" data-edit-source-id="${source._id}">Edit</button>
+                  <button type="button" class="button button-small button-danger" data-delete-source-id="${source._id}">Delete</button>
                 </td>
               </tr>
             `;
@@ -318,147 +660,592 @@
 
         sourcesBody.querySelectorAll("tr[data-source-id]").forEach((row) => {
           row.addEventListener("click", (event) => {
-            if (event.target.closest("[data-delete-source-id]")) {
+            if (event.target.closest("button")) {
               return;
             }
+
             selectedSourceId = row.getAttribute("data-source-id") || "";
-            renderSources(cachedSources);
-            loadCardsForSelectedSource();
+            renderSources();
+            renderCards();
+            renderRawData();
           });
         });
 
-        sourcesBody
-          .querySelectorAll("[data-delete-source-id]")
-          .forEach((button) => {
-            button.addEventListener("click", async (event) => {
-              event.stopPropagation();
-              const sourceId = button.getAttribute("data-delete-source-id");
-              if (!sourceId) {
-                return;
-              }
+        sourcesBody.querySelectorAll("[data-delete-source-id]").forEach((button) => {
+          button.addEventListener("click", async (event) => {
+            event.stopPropagation();
+            const sourceId = button.getAttribute("data-delete-source-id");
+            if (!sourceId) {
+              return;
+            }
 
-              const confirmed = window.confirm(
-                "Delete this topic and all its cards?",
-              );
-              if (!confirmed) {
-                return;
-              }
+            const confirmed = window.confirm("Delete this source and all its cards?");
+            if (!confirmed) {
+              return;
+            }
 
-              try {
-                await api(`/api/sources/${sourceId}`, { method: "DELETE" });
-                if (selectedSourceId === sourceId) {
-                  selectedSourceId = "";
-                }
-                await loadSources();
-              } catch (error) {
-                sourceSummary.textContent =
-                  error.message || "Failed to delete topic";
+            try {
+              await api(`/api/sources/${sourceId}`, { method: "DELETE" });
+              if (sourceId === selectedSourceId) {
+                selectedSourceId = "";
               }
-            });
+              await loadDashboardData();
+            } catch (error) {
+              sourceSummary.textContent = error.message || "Failed to delete source";
+            }
           });
+        });
+
+        sourcesBody.querySelectorAll("[data-edit-source-id]").forEach((button) => {
+          button.addEventListener("click", async (event) => {
+            event.stopPropagation();
+            const sourceId = button.getAttribute("data-edit-source-id");
+            const source = cachedSources.find((item) => item._id === sourceId);
+            if (!source) {
+              return;
+            }
+
+            const nextTopic = window.prompt("Topic", source.topic || "");
+            if (nextTopic === null) {
+              return;
+            }
+
+            const nextNotes = window.prompt("Notes", source.notes || "") ?? source.notes;
+            const nextExamDate = window.prompt("Exam date (YYYY-MM-DD or empty)", formatDateInput(source.examDate));
+            if (nextExamDate === null) {
+              return;
+            }
+
+            const nextStatus = window.prompt("Status (pending, processing, done, failed)", source.status || "done");
+            if (nextStatus === null) {
+              return;
+            }
+
+            try {
+              await api(`/api/sources/${sourceId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  topic: nextTopic,
+                  notes: nextNotes,
+                  examDate: nextExamDate || null,
+                  status: nextStatus,
+                }),
+              });
+
+              await loadDashboardData();
+            } catch (error) {
+              sourceSummary.textContent = error.message || "Failed to update source";
+            }
+          });
+        });
       }
 
-      async function loadSources() {
-        sourceSummary.textContent = "Loading sources...";
-        const { sources } = await api("/api/sources");
+      function renderCards() {
+        const cards = getCardsForSelectedSource();
+        cardsSummary.textContent = selectedSourceId
+          ? `${cards.length} card(s) in selected source`
+          : "Pick a source to manage cards.";
 
-        if (!selectedSourceId && Array.isArray(sources) && sources.length > 0) {
-          selectedSourceId = sources[0]._id;
+        const source = cachedSources.find((item) => item._id === selectedSourceId);
+        const cardsForWidget = cards.map((card) => ({
+          ...card,
+          sourceId: String(card.sourceId || ""),
+          topic: source?.topic || "",
+        }));
+        syncCardsToExtensionStorage(cardsForWidget);
+
+        if (!selectedSourceId) {
+          cardsContainer.innerHTML = '<div class="muted">Select a source from the left panel.</div>';
+          return;
         }
 
-        renderSources(Array.isArray(sources) ? sources : []);
-
-        if (selectedSourceId) {
-          await loadCardsForSelectedSource();
-        }
-      }
-
-      function renderCards(cards) {
-        cardsSummary.textContent = `${cards.length} card(s)`;
-        syncCardsToExtensionStorage(cards);
-
-        if (cards.length === 0) {
-          cardsContainer.innerHTML =
-            '<div class="muted">No cards for this source yet.</div>';
+        if (!cards.length) {
+          cardsContainer.innerHTML = '<div class="muted">No cards for this source yet.</div>';
           return;
         }
 
         cardsContainer.innerHTML = cards
           .map((card) => {
-            const questionOrContent = card.question || card.content || "-";
+            const prompt = card.question || card.content || "-";
             const answer = card.correct || card.answer || "";
             const options = Array.isArray(card.options) ? card.options : [];
             return `
               <article class="card-item" data-card-id="${card._id}">
-                <div>
-                  <span class="chip">${escapeHtml(card.type)}</span>
-                  <span class="chip">Difficulty ${escapeHtml(card.difficulty)}</span>
-                  <button type="button" class="button button-small button-danger" data-delete-card-id="${card._id}">Delete Card</button>
+                <div class="card-head">
+                  <div>
+                    <span class="chip">${escapeHtml(card.type)}</span>
+                    <span class="chip">Difficulty ${escapeHtml(card.difficulty || 3)}</span>
+                  </div>
+                  <div>
+                    <button type="button" class="button button-small" data-edit-card-id="${card._id}">Edit</button>
+                    <button type="button" class="button button-small button-danger" data-delete-card-id="${card._id}">Delete</button>
+                  </div>
                 </div>
-                <p><strong>${escapeHtml(questionOrContent)}</strong></p>
+                <p><strong>${escapeHtml(prompt)}</strong></p>
                 ${options.length ? `<p class="muted">Options: ${escapeHtml(options.join(" | "))}</p>` : ""}
                 ${answer ? `<p class="muted">Answer: ${escapeHtml(answer)}</p>` : ""}
-                ${card.youtubeQuery ? `<p class="muted" style="margin-top:4px"><a href="https://www.youtube.com/results?search_query=${encodeURIComponent(card.youtubeQuery)}" target="_blank" rel="noopener" style="color:#c4302b;text-decoration:none">&#9654; ${escapeHtml(card.youtubeQuery)}</a></p>` : ""}
-                ${card.googleQuery ? `<p class="muted"><a href="https://www.google.com/search?q=${encodeURIComponent(card.googleQuery)}" target="_blank" rel="noopener" style="color:#326fd1;text-decoration:none">&#128269; ${escapeHtml(card.googleQuery)}</a></p>` : ""}
+                ${card.youtubeQuery ? `<p class="muted">YouTube: ${escapeHtml(card.youtubeQuery)}</p>` : ""}
+                ${card.googleQuery ? `<p class="muted">Google: ${escapeHtml(card.googleQuery)}</p>` : ""}
               </article>
             `;
           })
           .join("");
 
-        cardsContainer
-          .querySelectorAll("[data-delete-card-id]")
-          .forEach((button) => {
-            button.addEventListener("click", async () => {
-              const cardId = button.getAttribute("data-delete-card-id");
-              if (!cardId) {
-                return;
-              }
+        cardsContainer.querySelectorAll("[data-delete-card-id]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const cardId = button.getAttribute("data-delete-card-id");
+            if (!cardId) {
+              return;
+            }
 
-              const confirmed = window.confirm("Delete this card?");
-              if (!confirmed) {
-                return;
-              }
+            const confirmed = window.confirm("Delete this card?");
+            if (!confirmed) {
+              return;
+            }
 
-              try {
-                await api(`/api/cards/${cardId}`, { method: "DELETE" });
-                await loadSources();
-              } catch (error) {
-                cardsSummary.textContent =
-                  error.message || "Failed to delete card";
-              }
-            });
+            try {
+              await api(`/api/cards/${cardId}`, { method: "DELETE" });
+              await loadDashboardData();
+            } catch (error) {
+              cardsSummary.textContent = error.message || "Failed to delete card";
+            }
           });
+        });
+
+        cardsContainer.querySelectorAll("[data-edit-card-id]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const cardId = button.getAttribute("data-edit-card-id");
+            const card = cards.find((item) => item._id === cardId);
+            if (!card) {
+              return;
+            }
+
+            const type = window.prompt("Type (mcq, short_answer, fill_blank, fact)", card.type || "mcq");
+            if (type === null) {
+              return;
+            }
+
+            const difficulty = window.prompt("Difficulty (1-5)", String(card.difficulty || 3));
+            if (difficulty === null) {
+              return;
+            }
+
+            const question = window.prompt("Question", card.question || "");
+            if (question === null) {
+              return;
+            }
+
+            const content = window.prompt("Content (fact cards)", card.content || "");
+            if (content === null) {
+              return;
+            }
+
+            const answer = window.prompt("Answer / Correct", card.correct || card.answer || "");
+            if (answer === null) {
+              return;
+            }
+
+            const options = window.prompt(
+              "Options CSV",
+              Array.isArray(card.options) ? card.options.join(", ") : "",
+            );
+            if (options === null) {
+              return;
+            }
+
+            const youtubeQuery = window.prompt("YouTube query", card.youtubeQuery || "");
+            if (youtubeQuery === null) {
+              return;
+            }
+
+            const googleQuery = window.prompt("Google query", card.googleQuery || "");
+            if (googleQuery === null) {
+              return;
+            }
+
+            try {
+              await api(`/api/cards/${cardId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  type,
+                  difficulty,
+                  question,
+                  content,
+                  correct: answer,
+                  answer,
+                  options,
+                  youtubeQuery,
+                  googleQuery,
+                }),
+              });
+              await loadDashboardData();
+            } catch (error) {
+              cardsSummary.textContent = error.message || "Failed to update card";
+            }
+          });
+        });
       }
 
-      async function loadCardsForSelectedSource() {
-        if (!selectedSourceId) {
-          cardsSummary.textContent = "Pick a source to view cards.";
-          cardsContainer.innerHTML = "";
+      async function loadDashboardData() {
+        sourceSummary.textContent = "Loading sources...";
+        cardsSummary.textContent = "Loading cards...";
+        rawDataView.textContent = "Fetching dashboard data...";
+
+        const payload = await api("/api/dashboard-data");
+        dashboardUser = payload.user || null;
+        cachedSources = Array.isArray(payload.sources) ? payload.sources : [];
+        cachedCards = Array.isArray(payload.cards) ? payload.cards : [];
+
+        if (dashboardUser) {
+          userSummary.textContent = `Logged in as ${dashboardUser.name || "User"} (${dashboardUser.email || ""})`;
+        }
+
+        if (!selectedSourceId && cachedSources.length) {
+          selectedSourceId = cachedSources[0]._id;
+        }
+
+        if (selectedSourceId && !cachedSources.some((source) => source._id === selectedSourceId)) {
+          selectedSourceId = cachedSources.length ? cachedSources[0]._id : "";
+        }
+
+        renderSources();
+        renderCards();
+        renderRawData();
+      }
+
+      addSourceForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        if (!newSourceTopic.value.trim()) {
+          sourceSummary.textContent = "Topic is required";
           return;
         }
 
-        cardsSummary.textContent = "Loading cards...";
-        const { cards } = await api(`/api/sources/${selectedSourceId}/cards`);
-        renderCards(Array.isArray(cards) ? cards : []);
-      }
+        try {
+          await api("/api/sources/manual", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              topic: newSourceTopic.value.trim(),
+              notes: newSourceNotes.value.trim(),
+              examDate: newSourceExamDate.value || null,
+            }),
+          });
+
+          newSourceTopic.value = "";
+          newSourceNotes.value = "";
+          newSourceExamDate.value = "";
+          await loadDashboardData();
+        } catch (error) {
+          sourceSummary.textContent = error.message || "Failed to add source";
+        }
+      });
+
+      addCardForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        if (!selectedSourceId) {
+          cardsSummary.textContent = "Select a source before adding cards.";
+          return;
+        }
+
+        try {
+          await api(`/api/sources/${selectedSourceId}/cards`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: newCardType.value,
+              difficulty: newCardDifficulty.value,
+              question: newCardQuestion.value,
+              content: newCardContent.value,
+              correct: newCardAnswer.value,
+              answer: newCardAnswer.value,
+              options: newCardOptions.value,
+              youtubeQuery: newCardYoutube.value,
+              googleQuery: newCardGoogle.value,
+            }),
+          });
+
+          newCardQuestion.value = "";
+          newCardContent.value = "";
+          newCardAnswer.value = "";
+          newCardOptions.value = "";
+          newCardYoutube.value = "";
+          newCardGoogle.value = "";
+          await loadDashboardData();
+        } catch (error) {
+          cardsSummary.textContent = error.message || "Failed to add card";
+        }
+      });
 
       async function init() {
         try {
           if (!dashboardToken) {
-            sourceSummary.textContent =
-              "Missing auth token. Open dashboard from the extension.";
+            sourceSummary.textContent = "Missing auth token. Open dashboard from extension popup.";
             cardsSummary.textContent = "";
+            rawDataView.textContent = JSON.stringify(
+              {
+                status: "error",
+                message: "Missing auth token. Open dashboard from extension popup.",
+              },
+              null,
+              2,
+            );
             return;
           }
 
-          await loadSources();
+          await loadDashboardData();
         } catch (error) {
-          sourceSummary.textContent = error.message || "Failed to load sources";
+          sourceSummary.textContent = error.message || "Failed to load dashboard data";
           cardsSummary.textContent = "";
+          rawDataView.textContent = JSON.stringify(
+            {
+              status: "error",
+              message: error.message || "Failed to load dashboard data",
+            },
+            null,
+            2,
+          );
         }
       }
 
-      refreshBtn.addEventListener("click", init);
+      const LOCAL_SNAPSHOT_REQUEST_EVENT = "RECALL_REQUEST_LOCAL_SNAPSHOT";
+      const LOCAL_SNAPSHOT_REPLY_EVENT = "RECALL_LOCAL_SNAPSHOT";
+
+      let localSnapshotReceived = false;
+
+      window.addEventListener("message", (event) => {
+        if (event.origin !== window.location.origin) {
+          return;
+        }
+
+        const msg = event.data;
+        if (!msg || msg.type !== LOCAL_SNAPSHOT_REPLY_EVENT) {
+          return;
+        }
+
+        localSnapshotReceived = true;
+        localSnapshotStatus.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+        renderLocalSnapshot(msg.data || {});
+      });
+
+      // ── Local Snapshot Rendering ──────────────────────────────────────────────
+
+      function snapTimeAgo(date) {
+        const secs = Math.floor((Date.now() - date) / 1000);
+        if (secs < 60) return `${secs}s ago`;
+        const mins = Math.floor(secs / 60);
+        if (mins < 60) return `${mins}m ago`;
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return `${hours}h ago`;
+        return `${Math.floor(hours / 24)}d ago`;
+      }
+
+      function snapFormatTs(value) {
+        if (!value) return '<span class="snap-empty">\u2014</span>';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return `<span class="snap-val">${escapeHtml(String(value))}</span>`;
+        return `<span class="snap-val">${d.toLocaleString()}</span> <span class="snap-ts">(${snapTimeAgo(d)})</span>`;
+      }
+
+      function snapRow(label, valueHtml) {
+        return `<div class="snap-row"><span class="snap-key">${escapeHtml(label)}</span>${valueHtml}</div>`;
+      }
+
+      function snapVal(text) {
+        return `<span class="snap-val">${escapeHtml(String(text))}</span>`;
+      }
+
+      function snapMono(text) {
+        return `<span class="snap-val snap-mono">${escapeHtml(String(text))}</span>`;
+      }
+
+      function snapEmpty(text) {
+        return `<span class="snap-empty">${escapeHtml(text)}</span>`;
+      }
+
+      function renderLocalSnapshot(data) {
+        const sections = [];
+
+        // ── User & Auth ───────────────────────────────────────────────────
+        const user = data.recallUser;
+        const token = data.recallAuthToken;
+        let userHtml = "";
+        if (user && typeof user === "object") {
+          userHtml += snapRow("Name", snapVal(user.name || user.displayName || "—"));
+          userHtml += snapRow("Email", snapVal(user.email || "—"));
+          if (user.plan) userHtml += snapRow("Plan", snapVal(user.plan));
+          if (user._id) userHtml += snapRow("User ID", snapMono(user._id));
+        } else {
+          userHtml += `<div class="snap-empty">Not logged in</div>`;
+        }
+        if (token) {
+          const masked = typeof token === "string" ? token.slice(0, 12) + "…" : "(set)";
+          userHtml += snapRow("Auth Token", `<span class="snap-val snap-mono snap-muted">${escapeHtml(masked)}</span>`);
+        }
+        sections.push({ title: "User & Auth", body: userHtml });
+
+        // ── Today's Stats ─────────────────────────────────────────────────
+        const stats = data.recallTodayStats;
+        let statsHtml = "";
+        if (stats && typeof stats === "object") {
+          const known = { date: "Date", answered: "Answered", correct: "Correct", streak: "Streak" };
+          for (const [k, label] of Object.entries(known)) {
+            if (stats[k] !== undefined) statsHtml += snapRow(label, snapVal(stats[k]));
+          }
+          for (const [k, v] of Object.entries(stats)) {
+            if (!Object.keys(known).includes(k)) {
+              statsHtml += snapRow(k, snapVal(JSON.stringify(v)));
+            }
+          }
+        } else {
+          statsHtml = `<div class="snap-empty">No stats recorded today yet.</div>`;
+        }
+        sections.push({ title: "Today\u2019s Stats", body: statsHtml });
+
+        // ── Settings ──────────────────────────────────────────────────────
+        let settingsHtml = "";
+        settingsHtml += snapRow("Exam Date", data.recallExamDate ? snapVal(data.recallExamDate) : snapEmpty("—"));
+        settingsHtml += snapRow("Last Source ID", data.recallLastSourceId ? snapMono(data.recallLastSourceId) : snapEmpty("—"));
+        settingsHtml += snapRow("DnD Mode", snapVal(data.recallWidgetDndMode ? "Enabled" : "Disabled"));
+        const colors = data.recallTopicColors;
+        if (colors && typeof colors === "object" && Object.keys(colors).length > 0) {
+          settingsHtml += `<div class="snap-row" style="align-items:flex-start;flex-direction:column;gap:4px"><span class="snap-key">Topic Colors</span>`;
+          for (const [topic, color] of Object.entries(colors)) {
+            settingsHtml += `<div class="snap-row snap-indent" style="width:100%"><span class="snap-key">${escapeHtml(topic)}</span><span class="snap-color-dot" style="background:${escapeHtml(color)}"></span><span class="snap-val snap-mono">${escapeHtml(color)}</span></div>`;
+          }
+          settingsHtml += `</div>`;
+        } else {
+          settingsHtml += snapRow("Topic Colors", snapEmpty("none set"));
+        }
+        sections.push({ title: "Settings", body: settingsHtml });
+
+        // ── Activity ──────────────────────────────────────────────────────
+        let activityHtml = "";
+        activityHtml += `<div class="snap-row"><span class="snap-key">Last Reviewed</span>${snapFormatTs(data.recallLastReviewedAt)}</div>`;
+        activityHtml += `<div class="snap-row"><span class="snap-key">Last Opened</span>${snapFormatTs(data.recallLastOpenedAt)}</div>`;
+        activityHtml += `<div class="snap-row"><span class="snap-key">Pulsed At</span>${snapFormatTs(data.pulsedAt)}</div>`;
+        sections.push({ title: "Activity", body: activityHtml });
+
+        // ── UI State ──────────────────────────────────────────────────────
+        let uiHtml = "";
+        uiHtml += snapRow("Ghost Card Shown", snapVal(data.ghostCardShown ? "Yes" : "No"));
+        const seen = data.seenFirstCardPerSource;
+        if (seen && typeof seen === "object" && Object.keys(seen).length > 0) {
+          uiHtml += `<div class="snap-row" style="align-items:flex-start;flex-direction:column;gap:4px"><span class="snap-key">Seen First Card Per Source (${Object.keys(seen).length})</span>`;
+          for (const [srcId, val] of Object.entries(seen)) {
+            uiHtml += `<div class="snap-row snap-indent" style="width:100%"><span class="snap-key snap-mono" style="font-size:11px">${escapeHtml(srcId)}</span>${snapVal(val ? "seen" : "not yet")}</div>`;
+          }
+          uiHtml += `</div>`;
+        } else {
+          uiHtml += snapRow("Seen First Card", snapEmpty("none recorded"));
+        }
+        sections.push({ title: "UI State", body: uiHtml });
+
+        // ── Widget Cards Cache ────────────────────────────────────────────
+        const cards = data.recallWidgetCards;
+        let cardsHtml = "";
+        if (Array.isArray(cards)) {
+          const bySource = {};
+          for (const c of cards) {
+            const sid = String(c.sourceId || "unknown");
+            if (!bySource[sid]) bySource[sid] = [];
+            bySource[sid].push(c);
+          }
+          cardsHtml += snapRow("Total Cards", snapVal(cards.length));
+          cardsHtml += snapRow("Sources with Cards", snapVal(Object.keys(bySource).length));
+          if (cards.length > 0) {
+            cardsHtml += `<details class="snap-details"><summary>${cards.length} card(s) — click to expand</summary><div class="snap-list">`;
+            for (const c of cards) {
+              const q = c.question || c.content || "(no question)";
+              const preview = q.length > 90 ? q.slice(0, 90) + "…" : q;
+              const chip = `<span class="chip">${escapeHtml(c.type || "?")}</span>`;
+              cardsHtml += `<div class="snap-list-item">${chip} ${escapeHtml(preview)}</div>`;
+            }
+            cardsHtml += `</div></details>`;
+          }
+        } else {
+          cardsHtml = `<div class="snap-empty">No widget cards cached.</div>`;
+        }
+        sections.push({ title: "Widget Cards Cache", body: cardsHtml });
+
+        // ── SM-2 Scheduling State ─────────────────────────────────────────
+        const sm2 = data.recallSM2State;
+        let sm2Html = "";
+        if (sm2 && typeof sm2 === "object") {
+          const entries = Object.entries(sm2);
+          const now = new Date();
+          const dueSoon = entries.filter(([, s]) => s && s.nextReview && new Date(s.nextReview) <= now);
+          sm2Html += snapRow("Card States Tracked", snapVal(entries.length));
+          sm2Html += snapRow("Due Now", `<span class="snap-val" style="color:${dueSoon.length > 0 ? "var(--error)" : "var(--ok)"}">${dueSoon.length}</span>`);
+          if (entries.length > 0) {
+            const sorted = [...entries].sort((a, b) => new Date(a[1] && a[1].nextReview || 0) - new Date(b[1] && b[1].nextReview || 0));
+            sm2Html += `<details class="snap-details"><summary>${entries.length} state(s) — click to expand (sorted by next review)</summary><div class="snap-list">`;
+            for (const [id, s] of sorted) {
+              const nr = s && s.nextReview ? new Date(s.nextReview).toLocaleDateString() : "—";
+              const isDue = s && s.nextReview && new Date(s.nextReview) <= now;
+              const dueChip = isDue ? ` <span class="chip" style="background:#fff5f4;border-color:#f1b7b5;color:#8f1f1b">due</span>` : "";
+              sm2Html += `<div class="snap-list-item"><span class="snap-mono" style="font-size:11px;color:var(--muted)">${escapeHtml(id.slice(-8))}</span> &nbsp; rep&nbsp;<b>${(s && s.repetitions) ?? 0}</b> &middot; EF&nbsp;<b>${((s && s.easeFactor) ?? 2.5).toFixed(2)}</b> &middot; interval&nbsp;<b>${(s && s.interval) ?? 0}d</b> &middot; next&nbsp;<b>${nr}</b>${dueChip}</div>`;
+            }
+            sm2Html += `</div></details>`;
+          }
+        } else {
+          sm2Html = `<div class="snap-empty">No SM-2 state recorded yet.</div>`;
+        }
+        sections.push({ title: "SM-2 Scheduling State", body: sm2Html });
+
+        // Render all sections
+        localDataView.innerHTML = sections
+          .map(
+            (s) =>
+              `<div class="snap-section"><div class="snap-section-title">${escapeHtml(s.title)}</div><div class="snap-section-body">${s.body}</div></div>`,
+          )
+          .join("");
+      }
+
+      // ─────────────────────────────────────────────────────────────────────────
+
+      function requestLocalSnapshot() {
+        localSnapshotReceived = false;
+        localDataView.innerHTML = '<p class="snap-status-msg">Requesting from extension content script&hellip;</p>';
+        localSnapshotStatus.textContent = "Requesting...";
+
+        let attempts = 0;
+        const MAX_ATTEMPTS = 4;
+        const INTERVAL_MS = 1200;
+
+        function tryRequest() {
+          if (localSnapshotReceived) {
+            return;
+          }
+
+          window.postMessage({ type: LOCAL_SNAPSHOT_REQUEST_EVENT }, window.location.origin);
+          attempts += 1;
+
+          if (attempts >= MAX_ATTEMPTS) {
+            setTimeout(() => {
+              if (!localSnapshotReceived) {
+                localDataView.innerHTML = '<p class="snap-status-msg" style="color:var(--error)">Extension not responding. Make sure the Recall extension is installed and enabled on this page, then click Refresh.</p>';
+                localSnapshotStatus.textContent = "Extension not responding.";
+              }
+            }, INTERVAL_MS);
+            return;
+          }
+
+          setTimeout(tryRequest, INTERVAL_MS);
+        }
+
+        tryRequest();
+      }
+
+      refreshBtn.addEventListener("click", () => {
+        requestLocalSnapshot();
+        init();
+      });
+
+      requestLocalSnapshot();
       init();
     </script>
   </body>

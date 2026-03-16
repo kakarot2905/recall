@@ -383,9 +383,10 @@ async function callApi(path, options = {}) {
       await handleLogout();
       throw new Error("Session expired. Please login again.");
     }
-    console.log(`[API] Success ${path}`);
     throw new Error(payload.error || "Request failed");
   }
+
+  console.log(`[API] Success ${path}`);
 
   return payload;
 }
@@ -1039,9 +1040,11 @@ async function runProgressSimulation() {
 }
 
 async function bootstrapFromStoredCards() {
-  const { recallCards, recallCalibrationCompleted } = await loadFromStorage([
+  const { recallCards, recallCalibrationCompleted, recallExamDate, recallLastSourceId } = await loadFromStorage([
     "recallCards",
     "recallCalibrationCompleted",
+    "recallExamDate",
+    "recallLastSourceId",
   ]);
 
   const hasGeneratedCards = Array.isArray(recallCards) && recallCards.length > 0;
@@ -1068,6 +1071,18 @@ async function bootstrapFromStoredCards() {
   // Sync existing cards to chrome.storage.local for widget access
   if (hasGeneratedCards) {
     await saveWidgetCards(cardsToSync);
+  }
+
+  // Keep exam metadata mirrored for widget-only readers even after local storage loss.
+  const storageSyncPayload = {};
+  if (typeof recallExamDate !== "undefined") {
+    storageSyncPayload.recallExamDate = recallExamDate;
+  }
+  if (typeof recallLastSourceId !== "undefined") {
+    storageSyncPayload.recallLastSourceId = recallLastSourceId;
+  }
+  if (Object.keys(storageSyncPayload).length) {
+    await setLocalExtensionStorage(storageSyncPayload);
   }
 
   // Check if there are uncalibrated cards
@@ -1107,7 +1122,7 @@ backToHomeBtn.addEventListener("click", () => {
 });
 
 quizSubmitBtn.addEventListener("click", checkCurrentAnswer);
-quizNextBtn.addEventListener("click", moveToNextCard);
+quizNextBtn.addEventListener("click", () => moveToNextCard().catch(console.error));
 
 setupForm.addEventListener("submit", async (event) => {
   event.preventDefault();

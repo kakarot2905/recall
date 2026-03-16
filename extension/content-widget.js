@@ -414,6 +414,7 @@
           console.error("[Recall Widget] Failed to save SM-2 state");
           return;
         }
+        incrementTodayAnsweredCount();
         console.log(`[Recall Widget] SM-2 updated for card ${cardId}, quality ${quality}, nextReview: ${storedSM2State[cardId].nextReview}`);
         logAllCardIntervals(allCardsForLogging, sm2State);
       });
@@ -2442,12 +2443,47 @@
     }
   }
 
+  const LOCAL_SNAPSHOT_REQUEST_EVENT = "RECALL_REQUEST_LOCAL_SNAPSHOT";
+  const LOCAL_SNAPSHOT_REPLY_EVENT = "RECALL_LOCAL_SNAPSHOT";
+
   window.addEventListener("message", (event) => {
     if (event.origin !== window.location.origin) {
       return;
     }
 
     const payload = event.data;
+
+    if (payload && payload.type === LOCAL_SNAPSHOT_REQUEST_EVENT) {
+      const STORAGE_KEYS = [
+        "recallWidgetCards",
+        "recallSM2State",
+        "recallTodayStats",
+        "recallExamDate",
+        "recallLastSourceId",
+        "recallLastReviewedAt",
+        "recallLastOpenedAt",
+        "recallWidgetDndMode",
+        "recallAuthToken",
+        "recallUser",
+        "pulsedAt",
+        "ghostCardShown",
+        "seenFirstCardPerSource",
+        "recallTopicColors",
+      ];
+
+      safeStorageGet(STORAGE_KEYS, {}, (result) => {
+        window.postMessage(
+          {
+            type: LOCAL_SNAPSHOT_REPLY_EVENT,
+            data: result || {},
+          },
+          window.location.origin,
+        );
+      });
+
+      return;
+    }
+
     if (!payload || payload.type !== DASHBOARD_SYNC_EVENT) {
       return;
     }
@@ -2458,19 +2494,62 @@
         console.log("[Recall Widget] Failed to sync cards from dashboard");
         return;
       }
+
+      safeStorageGet(["recallSM2State"], {}, (result) => {
+        sm2State = result.recallSM2State || {};
+        getCardsForCurrentContext(nextCards).then((contextualCards) => {
+          setCards(contextualCards);
+          applyDndModeUi();
+        });
+      });
+
       console.log(`[Recall Widget] Synced ${nextCards.length} cards from dashboard`);
     });
   });
+
+  // Proactively push local snapshot when running on the dashboard page so the
+  // dashboard receives data even if its request postMessage was sent before this
+  // content script listener was registered (document_idle timing race).
+  function maybePushLocalSnapshotToDashboard() {
+    const SNAPSHOT_KEYS = [
+      "recallWidgetCards",
+      "recallSM2State",
+      "recallTodayStats",
+      "recallExamDate",
+      "recallLastSourceId",
+      "recallLastReviewedAt",
+      "recallLastOpenedAt",
+      "recallWidgetDndMode",
+      "recallAuthToken",
+      "recallUser",
+      "pulsedAt",
+      "ghostCardShown",
+      "seenFirstCardPerSource",
+      "recallTopicColors",
+    ];
+
+    safeStorageGet(SNAPSHOT_KEYS, {}, (result) => {
+      window.postMessage(
+        {
+          type: LOCAL_SNAPSHOT_REPLY_EVENT,
+          data: result || {},
+        },
+        window.location.origin,
+      );
+    });
+  }
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       registerStorageChangeListener();
       createWidget();
       loadCardsFromStorage();
+      maybePushLocalSnapshotToDashboard();
     }, { once: true });
   } else {
     registerStorageChangeListener();
     createWidget();
     loadCardsFromStorage();
+    maybePushLocalSnapshotToDashboard();
   }
 })();
