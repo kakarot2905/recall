@@ -11,14 +11,15 @@ import {
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { cardId: string } },
+  { params }: { params: Promise<{ cardId: string }> },
 ) {
+  const { cardId } = await params;
   const { error, status, user } = await authMiddleware(req);
   if (error) return NextResponse.json({ error }, { status });
 
   await connectDB();
 
-  const card = await Card.findById(params.cardId);
+  const card = await Card.findById(cardId);
   if (!card)
     return NextResponse.json({ error: "Card not found" }, { status: 404 });
 
@@ -61,14 +62,15 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { cardId: string } },
+  { params }: { params: Promise<{ cardId: string }> },
 ) {
+  const { cardId } = await params;
   const { error, status, user } = await authMiddleware(req);
   if (error) return NextResponse.json({ error }, { status });
 
   await connectDB();
 
-  const card = await Card.findById(params.cardId);
+  const card = await Card.findById(cardId);
   if (!card)
     return NextResponse.json({ error: "Card not found" }, { status: 404 });
 

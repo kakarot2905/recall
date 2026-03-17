@@ -7,15 +7,16 @@ import { toTrimmedString, parseOptionalExamDate } from "@/lib/sources.helpers";
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { sourceId: string } },
+  { params }: { params: Promise<{ sourceId: string }> },
 ) {
+  const { sourceId } = await params;
   const { error, status, user } = await authMiddleware(req);
   if (error) return NextResponse.json({ error }, { status });
 
   await connectDB();
 
   const source = await Source.findOne({
-    _id: params.sourceId,
+    _id: sourceId,
     userId: user._id,
   });
   if (!source)
@@ -39,15 +40,16 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { sourceId: string } },
+  { params }: { params: Promise<{ sourceId: string }> },
 ) {
+  const { sourceId } = await params;
   const { error, status, user } = await authMiddleware(req);
   if (error) return NextResponse.json({ error }, { status });
 
   await connectDB();
 
   const source = await Source.findOne({
-    _id: params.sourceId,
+    _id: sourceId,
     userId: user._id,
   });
   if (!source)
