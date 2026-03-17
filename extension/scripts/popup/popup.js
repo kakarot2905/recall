@@ -804,6 +804,7 @@ async function checkCurrentAnswer() {
     const existing = sm2State[card._id] || sm2DefaultState();
     sm2State[card._id] = sm2Calculate(existing, quality);
     await saveSM2State(sm2State);
+    await setLocalExtensionStorage({ recallSyncPending: true });
   }
 
   quizState.checked = true;
