@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Recall Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="/dashboard.css" />
   </head>
   <body>
@@ -145,19 +146,32 @@
 
         <section class="panel panel-full">
           <div class="toolbar">
-            <h2>Local Extension Storage Snapshot</h2>
-            <p class="muted" id="localSnapshotStatus">
-              Requesting from extension content script...
-            </p>
+            <h2>Retention Graph</h2>
+            <p class="muted">Ebbinghaus forgetting curves per topic — past 7 days to exam</p>
           </div>
-          <div id="localDataView" class="local-snapshot-view">
-            <p class="snap-status-msg">Waiting for content script&hellip;</p>
+
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+            <div class="field" style="margin:0;min-width:180px">
+              <label for="retentionTopicSelect" style="font-size:12px">Topic</label>
+              <select id="retentionTopicSelect"
+                      style="width:100%;border:1px solid var(--border);border-radius:8px;
+                             padding:6px 8px;font-size:13px;font-family:inherit;
+                             background:#fff;color:var(--ink);outline:none">
+                <option value="">All Topics</option>
+              </select>
+            </div>
+            <p class="muted" id="retentionStatus" style="margin:0;font-size:13px"></p>
+          </div>
+
+          <div style="position:relative;height:300px">
+            <canvas id="retentionCanvas"></canvas>
           </div>
         </section>
       </div>
     </div>
 
     <script src="/dashboard-snapshot.js"></script>
+    <script src="/dashboard-retention.js"></script>
     <script src="/dashboard.js"></script>
   </body>
 </html>

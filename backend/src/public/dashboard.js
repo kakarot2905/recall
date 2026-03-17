@@ -23,6 +23,17 @@ const newCardOptions = document.getElementById("newCardOptions");
 const newCardYoutube = document.getElementById("newCardYoutube");
 const newCardGoogle = document.getElementById("newCardGoogle");
 
+const retentionTopicSelect = document.getElementById("retentionTopicSelect");
+const retentionStatus = document.getElementById("retentionStatus");
+const {
+    getTopics: retentionGetTopics,
+    resolveExamDate,
+    computeRetentionSeries,
+    renderRetentionChart,
+} = window.RecallDashboardRetention || {};
+
+let currentRetentionData = null;
+
 const DASHBOARD_SYNC_EVENT = "RECALL_SYNC_WIDGET_CARDS";
 const snapshotHelpers = window.RecallDashboardSnapshot || {};
 const escapeHtml = snapshotHelpers.escapeHtml || ((value) => String(value || ""));
@@ -113,6 +124,42 @@ function renderRawData() {
         dashboardUser,
         rawDataView,
     });
+}
+
+async function renderRetentionGraph() {
+    if (!dashboardToken) return;
+
+    retentionStatus.textContent = "Loading...";
+    retentionTopicSelect.innerHTML = '<option value="">All Topics</option>';
+    currentRetentionData = null;
+
+    try {
+        const progressPayload = await api("/progress");
+        const sm2State = progressPayload.sm2State || {};
+
+        const topics = retentionGetTopics(cachedCards, sm2State);
+
+        if (!topics.length) {
+            retentionStatus.textContent =
+                "No reviewed cards yet. Complete a calibration quiz to see your curves.";
+            return;
+        }
+
+        topics.forEach(topic => {
+            const opt = document.createElement("option");
+            opt.value = topic;
+            opt.textContent = topic;
+            retentionTopicSelect.appendChild(opt);
+        });
+
+        const examDate = resolveExamDate(cachedSources);
+        currentRetentionData = computeRetentionSeries(cachedCards, sm2State, examDate);
+        retentionStatus.textContent = "";
+        renderRetentionChart("retentionCanvas", currentRetentionData, null);
+    } catch (err) {
+        retentionStatus.textContent = "Failed to load retention data.";
+        console.error("[Recall Dashboard] Retention graph error:", err);
+    }
 }
 
 function renderSources() {
@@ -420,6 +467,7 @@ async function loadDashboardData() {
     renderSources();
     renderCards();
     renderRawData();
+    renderRetentionGraph();
 }
 
 addSourceForm.addEventListener("submit", async (event) => {
@@ -586,6 +634,12 @@ function requestLocalSnapshot() {
 refreshBtn.addEventListener("click", () => {
     requestLocalSnapshot();
     init();
+});
+
+retentionTopicSelect.addEventListener("change", () => {
+    if (!currentRetentionData) return;
+    const selected = retentionTopicSelect.value || null;
+    renderRetentionChart("retentionCanvas", currentRetentionData, selected);
 });
 
 requestLocalSnapshot();
