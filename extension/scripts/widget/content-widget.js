@@ -147,6 +147,54 @@
   });
   const isChromeStorageAvailable = storageApi?.isAvailable || (() => false);
 
+  function markSyncPending() {
+    safeStorageSet({ recallSyncPending: true });
+  }
+
+  function pushProgressToServer() {
+    try {
+      safeStorageGet([
+        "recallSyncPending",
+        "recallSM2State",
+        "recallTodayStats",
+        "ghostCardShown",
+        "seenFirstCardPerSource",
+        "recallAuthToken",
+      ], {}, async (result) => {
+        try {
+          const recallSyncPending = result.recallSyncPending;
+          const recallAuthToken = result.recallAuthToken;
+
+          if (!recallSyncPending || !recallAuthToken) {
+            return;
+          }
+
+          const response = await fetch("http://localhost:3000/api/progress", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${recallAuthToken}`,
+            },
+            body: JSON.stringify({
+              sm2State: result.recallSM2State || {},
+              todayStats: result.recallTodayStats ? [result.recallTodayStats] : [],
+              ghostCardShown: result.ghostCardShown || {},
+              seenFirstCardPerSource: result.seenFirstCardPerSource || {},
+            }),
+          });
+
+          if (response.ok) {
+            safeStorageSet({ recallSyncPending: false });
+          }
+        } catch {
+          // Best-effort sync only.
+        }
+      });
+    } catch {
+      // Best-effort sync only.
+    }
+  }
+
   function hideWidgetUntilQueueRefresh() {
     const widget = document.getElementById(WIDGET_ID);
     if (widget) {
@@ -347,6 +395,7 @@
           console.error("[Recall Widget] Failed to save SM-2 state");
           return;
         }
+        markSyncPending();
         incrementTodayAnsweredCount();
         console.log(`[Recall Widget] SM-2 updated for card ${cardId}, quality ${quality}, nextReview: ${storedSM2State[cardId].nextReview}`);
         logAllCardIntervals(allCardsForLogging, sm2State);
@@ -491,7 +540,10 @@
           ...ghostCardShown,
           [sourceId]: true,
         },
-      }, () => resolve());
+      }, () => {
+        markSyncPending();
+        resolve();
+      });
     });
 
     return [ghostCard, ...safeCards];
@@ -637,6 +689,7 @@
             [sourceId]: true,
           },
         });
+        markSyncPending();
         return;
       }
 
@@ -1947,6 +2000,7 @@
     });
 
     safeStorageSet({ recallLastOpenedAt: Date.now() });
+    window.setTimeout(() => pushProgressToServer(), 0);
   }
 
   function registerStorageChangeListener() {
@@ -2057,12 +2111,14 @@
       registerStorageChangeListener();
       createWidget();
       loadCardsFromStorage();
+      window.setInterval(() => pushProgressToServer(), 30000);
       maybePushLocalSnapshotToDashboard();
     }, { once: true });
   } else {
     registerStorageChangeListener();
     createWidget();
     loadCardsFromStorage();
+    window.setInterval(() => pushProgressToServer(), 30000);
     maybePushLocalSnapshotToDashboard();
   }
 })();

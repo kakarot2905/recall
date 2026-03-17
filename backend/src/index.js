@@ -5,6 +5,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import sourcesRouter from './routes/sources.js';
+import progressRouter from './routes/progress.js';
 import authRouter from './routes/auth.js';
 import checkAnswerRouter from './routes/checkAnswer.js';
 
@@ -43,6 +44,7 @@ mongoose.connect(process.env.MONGODB_URI)
 // Routes
 app.use('/api/auth', authRouter);
 app.use('/api', sourcesRouter);
+app.use('/api', progressRouter);
 app.use('/api', checkAnswerRouter);
 
 app.get('/', (_req, res) => {

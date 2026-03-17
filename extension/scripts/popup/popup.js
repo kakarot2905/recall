@@ -203,6 +203,121 @@ async function callApi(path, options = {}) {
   return payload;
 }
 
+function toTimestamp(value) {
+  if (!value) {
+    return null;
+  }
+
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+async function pullProgressFromServer() {
+  try {
+    const serverProgress = await callApi('/progress');
+
+    const local = await getLocalExtensionStorage([
+      'recallSM2State',
+      'ghostCardShown',
+      'seenFirstCardPerSource',
+    ]);
+
+    const localSm2State = local.recallSM2State || {};
+    const serverSm2State = serverProgress?.sm2State || {};
+    const mergedSm2State = { ...localSm2State };
+
+    Object.entries(serverSm2State).forEach(([cardId, serverEntry]) => {
+      const localEntry = mergedSm2State[cardId];
+
+      if (!localEntry) {
+        mergedSm2State[cardId] = serverEntry;
+        return;
+      }
+
+      const localLastReviewed = toTimestamp(localEntry?.lastReviewed);
+      const serverLastReviewed = toTimestamp(serverEntry?.lastReviewed);
+
+      if (localLastReviewed === null) {
+        mergedSm2State[cardId] = serverEntry;
+        return;
+      }
+
+      if (serverLastReviewed === null) {
+        return;
+      }
+
+      if (serverLastReviewed >= localLastReviewed) {
+        mergedSm2State[cardId] = serverEntry;
+      }
+    });
+
+    const localGhostCardShown = local.ghostCardShown || {};
+    const serverGhostCardShown = serverProgress?.ghostCardShown || {};
+    const mergedGhostCardShown = {
+      ...localGhostCardShown,
+      ...serverGhostCardShown,
+    };
+    Object.keys(mergedGhostCardShown).forEach((key) => {
+      mergedGhostCardShown[key] = Boolean(localGhostCardShown[key]) || Boolean(serverGhostCardShown[key]);
+    });
+
+    const localSeenFirstCardPerSource = local.seenFirstCardPerSource || {};
+    const serverSeenFirstCardPerSource = serverProgress?.seenFirstCardPerSource || {};
+    const mergedSeenFirstCardPerSource = {
+      ...localSeenFirstCardPerSource,
+      ...serverSeenFirstCardPerSource,
+    };
+    Object.keys(mergedSeenFirstCardPerSource).forEach((key) => {
+      mergedSeenFirstCardPerSource[key] = Boolean(localSeenFirstCardPerSource[key]) || Boolean(serverSeenFirstCardPerSource[key]);
+    });
+
+    await setLocalExtensionStorage({
+      recallSM2State: mergedSm2State,
+      ghostCardShown: mergedGhostCardShown,
+      seenFirstCardPerSource: mergedSeenFirstCardPerSource,
+      recallSyncPending: false,
+    });
+
+    console.log('[Sync] Pulled progress from server');
+  } catch {
+    // Sync is best-effort and must not block user flows.
+  }
+}
+
+async function pushProgressToServer() {
+  try {
+    const local = await getLocalExtensionStorage([
+      'recallSyncPending',
+      'recallSM2State',
+      'recallTodayStats',
+      'ghostCardShown',
+      'seenFirstCardPerSource',
+    ]);
+
+    if (!local.recallSyncPending) {
+      return;
+    }
+
+    await callApi('/progress', {
+      method: 'PUT',
+      body: JSON.stringify({
+        sm2State: local.recallSM2State || {},
+        todayStats: local.recallTodayStats ? [local.recallTodayStats] : [],
+        ghostCardShown: local.ghostCardShown || {},
+        seenFirstCardPerSource: local.seenFirstCardPerSource || {},
+      }),
+    });
+
+    await setLocalExtensionStorage({
+      recallSyncPending: false,
+    });
+
+    console.log('[Sync] Pushed progress to server');
+  } catch {
+    // Sync is best-effort and must not block user flows.
+  }
+}
+
 async function waitForCompletion(sourceId) {
   const maxAttempts = 120;
 
@@ -266,6 +381,8 @@ async function saveAuthToken(token, user) {
       recallUser: user,
     }),
   ]);
+
+  pullProgressFromServer();
 }
 
 async function handleLogout() {
@@ -867,6 +984,8 @@ async function initializeApp() {
     showScreen("auth");
     return;
   }
+
+  pushProgressToServer();
 
   await bootstrapFromStoredCards();
 }
