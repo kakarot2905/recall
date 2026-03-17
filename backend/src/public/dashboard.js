@@ -4,8 +4,6 @@ const sourceSummary = document.getElementById("sourceSummary");
 const cardsSummary = document.getElementById("cardsSummary");
 const userSummary = document.getElementById("userSummary");
 const rawDataView = document.getElementById("rawDataView");
-const localDataView = document.getElementById("localDataView");
-const localSnapshotStatus = document.getElementById("localSnapshotStatus");
 const refreshBtn = document.getElementById("refreshBtn");
 
 const addSourceForm = document.getElementById("addSourceForm");
@@ -137,7 +135,7 @@ async function renderRetentionGraph() {
         const progressPayload = await api("/progress");
         const sm2State = progressPayload.sm2State || {};
 
-        const topics = retentionGetTopics(cachedCards, sm2State);
+        const topics = retentionGetTopics(cachedCards, sm2State, cachedSources);
 
         if (!topics.length) {
             retentionStatus.textContent =
@@ -153,7 +151,7 @@ async function renderRetentionGraph() {
         });
 
         const examDate = resolveExamDate(cachedSources);
-        currentRetentionData = computeRetentionSeries(cachedCards, sm2State, examDate);
+        currentRetentionData = computeRetentionSeries(cachedCards, sm2State, examDate, cachedSources);
         retentionStatus.textContent = "";
         renderRetentionChart("retentionCanvas", currentRetentionData, null);
     } catch (err) {
@@ -567,72 +565,7 @@ async function init() {
     }
 }
 
-const LOCAL_SNAPSHOT_REQUEST_EVENT = "RECALL_REQUEST_LOCAL_SNAPSHOT";
-const LOCAL_SNAPSHOT_REPLY_EVENT = "RECALL_LOCAL_SNAPSHOT";
-
-let localSnapshotReceived = false;
-
-window.addEventListener("message", (event) => {
-    if (event.origin !== window.location.origin) {
-        return;
-    }
-
-    const msg = event.data;
-    if (!msg || msg.type !== LOCAL_SNAPSHOT_REPLY_EVENT) {
-        return;
-    }
-
-    localSnapshotReceived = true;
-    localSnapshotStatus.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
-    renderLocalSnapshot(msg.data || {});
-});
-
-function renderLocalSnapshot(data) {
-    if (typeof snapshotHelpers.renderLocalSnapshot !== "function") {
-        localDataView.innerHTML = '<p class="snap-status-msg" style="color:var(--error)">Snapshot helper unavailable.</p>';
-        return;
-    }
-
-    snapshotHelpers.renderLocalSnapshot(data, localDataView);
-}
-
-function requestLocalSnapshot() {
-    localSnapshotReceived = false;
-    localDataView.innerHTML =
-        '<p class="snap-status-msg">Requesting from extension content script&hellip;</p>';
-    localSnapshotStatus.textContent = "Requesting...";
-
-    let attempts = 0;
-    const MAX_ATTEMPTS = 4;
-    const INTERVAL_MS = 1200;
-
-    function tryRequest() {
-        if (localSnapshotReceived) {
-            return;
-        }
-
-        window.postMessage({ type: LOCAL_SNAPSHOT_REQUEST_EVENT }, window.location.origin);
-        attempts += 1;
-
-        if (attempts >= MAX_ATTEMPTS) {
-            setTimeout(() => {
-                if (!localSnapshotReceived) {
-                    localDataView.innerHTML =
-                        '<p class="snap-status-msg" style="color:var(--error)">Extension not responding. Make sure the Recall extension is installed and enabled on this page, then click Refresh.</p>';
-                    localSnapshotStatus.textContent = "Extension not responding.";
-                }
-            }, INTERVAL_MS);
-            return;
-        }
-
-        setTimeout(tryRequest, INTERVAL_MS);
-    }
-
-    tryRequest();
-}
-
 refreshBtn.addEventListener("click", () => {
-    requestLocalSnapshot();
     init();
 });
 
@@ -642,5 +575,4 @@ retentionTopicSelect.addEventListener("change", () => {
     renderRetentionChart("retentionCanvas", currentRetentionData, selected);
 });
 
-requestLocalSnapshot();
 init();

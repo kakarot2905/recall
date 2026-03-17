@@ -19,8 +19,21 @@
     return arr.reduce((sum, v) => sum + v, 0) / arr.length
   }
 
-  function topicForCard(card) {
-    return card.topic || (card.sourceId != null ? String(card.sourceId) : 'Unknown')
+  function buildSourceTopicMap(sources) {
+    const map = {}
+    for (const source of (Array.isArray(sources) ? sources : [])) {
+      if (source && source._id) {
+        map[String(source._id)] = source.topic || String(source._id)
+      }
+    }
+    return map
+  }
+
+  function topicForCard(card, sourceTopicMap) {
+    if (card.topic) return card.topic
+    const sid = card.sourceId != null ? String(card.sourceId) : null
+    if (!sid) return 'Unknown'
+    return (sourceTopicMap && sourceTopicMap[sid]) || sid
   }
 
   function isReviewed(sm2State, id) {
@@ -43,11 +56,12 @@
    * @param {Object} sm2State  - map of card._id → SM-2 state
    * @returns {string[]}
    */
-  function getTopics(cards, sm2State) {
+  function getTopics(cards, sm2State, sources) {
+    const sourceTopicMap = buildSourceTopicMap(sources)
     const topics = new Set()
     for (const card of cards) {
       if (isReviewed(sm2State, card._id)) {
-        topics.add(topicForCard(card))
+        topics.add(topicForCard(card, sourceTopicMap))
       }
     }
     return Array.from(topics).sort()
@@ -92,7 +106,8 @@
    * @param {Date|null} examDate - resolved exam date (or null)
    * @returns {{ days: Date[], dayOffsets: number[], labels: string[], series: Object }}
    */
-  function computeRetentionSeries(cards, sm2State, examDate) {
+  function computeRetentionSeries(cards, sm2State, examDate, sources) {
+    const sourceTopicMap = buildSourceTopicMap(sources)
     // Build X-axis day array
     const todayMidnight = new Date()
     todayMidnight.setHours(0, 0, 0, 0)
@@ -123,7 +138,7 @@
     const byTopic = {}
     for (const card of cards) {
       if (!isReviewed(sm2State, card._id)) continue
-      const topic = topicForCard(card)
+      const topic = topicForCard(card, sourceTopicMap)
       if (!byTopic[topic]) byTopic[topic] = []
       byTopic[topic].push(card)
     }
