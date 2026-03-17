@@ -147,23 +147,49 @@
         <section class="panel panel-full">
           <div class="toolbar">
             <h2>Retention Graph</h2>
-            <p class="muted">Ebbinghaus forgetting curves per topic — past 7 days to exam</p>
+            <p class="muted">
+              Ebbinghaus forgetting curves per topic — past 7 days to exam
+            </p>
           </div>
 
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
-            <div class="field" style="margin:0;min-width:180px">
-              <label for="retentionTopicSelect" style="font-size:12px">Topic</label>
-              <select id="retentionTopicSelect"
-                      style="width:100%;border:1px solid var(--border);border-radius:8px;
-                             padding:6px 8px;font-size:13px;font-family:inherit;
-                             background:#fff;color:var(--ink);outline:none">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              margin-bottom: 14px;
+              flex-wrap: wrap;
+            "
+          >
+            <div class="field" style="margin: 0; min-width: 180px">
+              <label for="retentionTopicSelect" style="font-size: 12px"
+                >Topic</label
+              >
+              <select
+                id="retentionTopicSelect"
+                style="
+                  width: 100%;
+                  border: 1px solid var(--border);
+                  border-radius: 8px;
+                  padding: 6px 8px;
+                  font-size: 13px;
+                  font-family: inherit;
+                  background: #fff;
+                  color: var(--ink);
+                  outline: none;
+                "
+              >
                 <option value="">All Topics</option>
               </select>
             </div>
-            <p class="muted" id="retentionStatus" style="margin:0;font-size:13px"></p>
+            <p
+              class="muted"
+              id="retentionStatus"
+              style="margin: 0; font-size: 13px"
+            ></p>
           </div>
 
-          <div style="position:relative;height:300px">
+          <div style="position: relative; height: 300px">
             <canvas id="retentionCanvas"></canvas>
           </div>
         </section>

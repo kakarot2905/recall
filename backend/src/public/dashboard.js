@@ -124,6 +124,29 @@ function renderRawData() {
     });
 }
 
+function logRetentionGraphValues(retentionData, selectedTopic = null) {
+    if (!retentionData || !Array.isArray(retentionData.labels) || !retentionData.series) {
+        return;
+    }
+
+    const topicsToLog = selectedTopic ? [selectedTopic] : Object.keys(retentionData.series);
+    const payload = {};
+
+    topicsToLog.forEach((topic) => {
+        const values = retentionData.series[topic];
+        if (!Array.isArray(values)) {
+            return;
+        }
+
+        payload[topic] = retentionData.labels.map((label, idx) => ({
+            date: label,
+            retention: values[idx],
+        }));
+    });
+
+    console.log("[Recall Dashboard] Retention graph values:", payload);
+}
+
 async function renderRetentionGraph() {
     if (!dashboardToken) return;
 
@@ -132,7 +155,7 @@ async function renderRetentionGraph() {
     currentRetentionData = null;
 
     try {
-        const progressPayload = await api("/progress");
+        const progressPayload = await api("/api/progress");
         const sm2State = progressPayload.sm2State || {};
 
         const topics = retentionGetTopics(cachedCards, sm2State, cachedSources);
@@ -154,6 +177,7 @@ async function renderRetentionGraph() {
         currentRetentionData = computeRetentionSeries(cachedCards, sm2State, examDate, cachedSources);
         retentionStatus.textContent = "";
         renderRetentionChart("retentionCanvas", currentRetentionData, null);
+        logRetentionGraphValues(currentRetentionData, null);
     } catch (err) {
         retentionStatus.textContent = "Failed to load retention data.";
         console.error("[Recall Dashboard] Retention graph error:", err);
@@ -573,6 +597,7 @@ retentionTopicSelect.addEventListener("change", () => {
     if (!currentRetentionData) return;
     const selected = retentionTopicSelect.value || null;
     renderRetentionChart("retentionCanvas", currentRetentionData, selected);
+    logRetentionGraphValues(currentRetentionData, selected);
 });
 
 init();
