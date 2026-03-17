@@ -37,10 +37,11 @@
     }
 
     function isReviewed(sm2State, id) {
+        const key = String(id)
         return (
-            id in sm2State &&
-            sm2State[id].lastReviewed != null &&
-            typeof sm2State[id].lastReviewed === 'string'
+            key in sm2State &&
+            sm2State[key].lastReviewed != null &&
+            typeof sm2State[key].lastReviewed === 'string'
         )
     }
 
@@ -60,7 +61,7 @@
         const sourceTopicMap = buildSourceTopicMap(sources)
         const topics = new Set()
         for (const card of cards) {
-            if (isReviewed(sm2State, card._id)) {
+            if (isReviewed(sm2State, String(card._id))) {
                 topics.add(topicForCard(card, sourceTopicMap))
             }
         }
@@ -137,7 +138,7 @@
         // Group cards by topic (reviewed cards only)
         const byTopic = {}
         for (const card of cards) {
-            if (!isReviewed(sm2State, card._id)) continue
+            if (!isReviewed(sm2State, String(card._id))) continue
             const topic = topicForCard(card, sourceTopicMap)
             if (!byTopic[topic]) byTopic[topic] = []
             byTopic[topic].push(card)
@@ -153,7 +154,7 @@
 
                 const perCard = topicCards
                     .map(card => {
-                        const state = sm2State[card._id]
+                        const state = sm2State[String(card._id)]
                         const lastReviewedMs = new Date(state.lastReviewed).getTime()
 
                         // Compare using end-of-day so a card reviewed at any point
@@ -161,7 +162,7 @@
                         const dayEndMs = dayMs + 86399999
                         if (lastReviewedMs > dayEndMs) return null
 
-                        const S = Math.max((state.interval || 600000) / 86400000, 1)
+                        const S = Math.max((state.stability || 1), 1)
                         // t = days elapsed since last review, measured from last review
                         // moment to the end of the current day bucket
                         const t = (dayEndMs - lastReviewedMs) / 86400000
@@ -175,6 +176,9 @@
 
             series[topic] = retentionValues
         }
+
+        // Log the computed series for debugging
+        console.log('Retention series:', series)
 
         return { days, dayOffsets, labels, series }
     }
@@ -208,7 +212,7 @@
             .filter(t => series[t])
             .map((topic, idx) => ({
                 label: topic,
-                data: series[topic],
+                data: series[topic].map(v => v === null ? NaN : v),
                 borderColor: PALETTE[idx % PALETTE.length],
                 backgroundColor: PALETTE[idx % PALETTE.length] + '22',
                 borderWidth: 2,

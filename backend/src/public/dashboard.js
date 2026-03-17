@@ -31,6 +31,7 @@ const {
 } = window.RecallDashboardRetention || {};
 
 let currentRetentionData = null;
+let currentSm2State = null;
 
 const DASHBOARD_SYNC_EVENT = "RECALL_SYNC_WIDGET_CARDS";
 const snapshotHelpers = window.RecallDashboardSnapshot || {};
@@ -147,16 +148,27 @@ function logRetentionGraphValues(retentionData, selectedTopic = null) {
     console.log("[Recall Dashboard] Retention graph values:", payload);
 }
 
+function logSm2Values(sm2State) {
+    if (!sm2State || typeof sm2State !== "object") {
+        return;
+    }
+
+    console.log("[Recall Dashboard] SM-2 state values:", sm2State);
+}
+
 async function renderRetentionGraph() {
     if (!dashboardToken) return;
 
     retentionStatus.textContent = "Loading...";
     retentionTopicSelect.innerHTML = '<option value="">All Topics</option>';
     currentRetentionData = null;
+    currentSm2State = null;
 
     try {
         const progressPayload = await api("/api/progress");
         const sm2State = progressPayload.sm2State || {};
+        currentSm2State = sm2State;
+        logSm2Values(currentSm2State);
 
         const topics = retentionGetTopics(cachedCards, sm2State, cachedSources);
 
@@ -598,6 +610,7 @@ retentionTopicSelect.addEventListener("change", () => {
     const selected = retentionTopicSelect.value || null;
     renderRetentionChart("retentionCanvas", currentRetentionData, selected);
     logRetentionGraphValues(currentRetentionData, selected);
+    logSm2Values(currentSm2State);
 });
 
 init();
