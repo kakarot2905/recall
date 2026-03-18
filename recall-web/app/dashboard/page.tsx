@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Navbar from "@/components/Navbar";
+import Sidebar from "@/components/Sidebar";
 import RetentionChart from "@/components/RetentionChart";
 import SourcesTable from "@/components/SourcesTable";
 import CardsPanel from "@/components/CardsPanel";
@@ -16,8 +18,9 @@ function DashboardContent() {
   const [cards, setCards] = useState<any[]>([]);
   const [sm2State, setSm2State] = useState<Record<string, any>>({});
   const [selectedSourceId, setSelectedSourceId] = useState<string>("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     const tokenFromUrl = searchParams.get("token");
@@ -77,7 +80,7 @@ function DashboardContent() {
 
   if (loading)
     return (
-      <div style={{ padding: 40, fontFamily: "Segoe UI, sans-serif" }}>
+      <div style={{ padding: 40, fontFamily: "system-ui, sans-serif", color: "var(--text-secondary)" }}>
         Loading...
       </div>
     );
@@ -87,8 +90,8 @@ function DashboardContent() {
       <div
         style={{
           padding: 40,
-          fontFamily: "Segoe UI, sans-serif",
-          color: "#b42318",
+          fontFamily: "system-ui, sans-serif",
+          color: "var(--error)",
         }}
       >
         {error}
@@ -96,97 +99,101 @@ function DashboardContent() {
     );
 
   return (
-    <div
-      style={{
-        maxWidth: 1280,
-        margin: "0 auto",
-        padding: 24,
-        fontFamily: "Segoe UI, sans-serif",
-      }}
-    >
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 24,
-          paddingBottom: 16,
-          borderBottom: "1px solid #d8deea",
-        }}
-      >
-        <div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800 }}>
-            Recall Dashboard
-          </h1>
-          <p style={{ margin: "4px 0 0", color: "#5e6678", fontSize: 14 }}>
-            {user ? `Logged in as ${user.name} (${user.email})` : ""}
-          </p>
-        </div>
-        <button
-          onClick={loadAll}
+    <>
+      <Navbar user={user} onRefresh={loadAll} onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      <div style={{ display: "flex", minHeight: "calc(100vh - 64px)" }}>
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        
+        <main
           style={{
-            border: "1px solid #d8deea",
-            background: "#fff",
-            borderRadius: 10,
-            padding: "8px 16px",
-            fontWeight: 600,
-            cursor: "pointer",
+            flex: 1,
+            padding: "24px",
+            background: "var(--background)",
+            marginLeft: sidebarOpen ? "240px" : "80px",
+            transition: "margin-left 0.3s ease",
           }}
         >
-          Refresh
-        </button>
-      </header>
+          <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+            {/* Page Header */}
+            <div style={{ marginBottom: "32px" }}>
+              <h2
+                style={{
+                  margin: "0 0 8px",
+                  fontSize: "28px",
+                  fontWeight: "700",
+                  color: "var(--foreground)",
+                }}
+              >
+                Dashboard
+              </h2>
+              <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "14px" }}>
+                Track your spaced repetition progress and manage learning sources
+              </p>
+            </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <SourcesTable
-          sources={sources}
-          selectedSourceId={selectedSourceId}
-          onSelect={setSelectedSourceId}
-          onRefresh={loadAll}
-          api={api}
-        />
-        <CardsPanel
-          cards={cards}
-          sources={sources}
-          selectedSourceId={selectedSourceId}
-          onRefresh={loadAll}
-          api={api}
-        />
-        <div
-          style={{
-            gridColumn: "1 / -1",
-            background: "#fff",
-            border: "1px solid #d8deea",
-            borderRadius: 14,
-            padding: 16,
-          }}
-        >
-          <h2 style={{ margin: "0 0 16px" }}>Backend Data Snapshot</h2>
-          <BackendSnapshot sources={sources} cards={cards} user={user} />
-        </div>
-        <div
-          style={{
-            gridColumn: "1 / -1",
-            background: "#fff",
-            border: "1px solid #d8deea",
-            borderRadius: 14,
-            padding: 16,
-          }}
-        >
-          <h2 style={{ margin: "0 0 4px" }}>Retention Graph</h2>
-          <p style={{ margin: "0 0 16px", color: "#5e6678", fontSize: 13 }}>
-            Ebbinghaus forgetting curves per topic — past 7 days to exam
-          </p>
-          <RetentionChart cards={cards} sources={sources} sm2State={sm2State} />
-        </div>
+            {/* Main Content Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+              <SourcesTable
+                sources={sources}
+                selectedSourceId={selectedSourceId}
+                onSelect={setSelectedSourceId}
+                onRefresh={loadAll}
+                api={api}
+              />
+              <CardsPanel
+                cards={cards}
+                sources={sources}
+                selectedSourceId={selectedSourceId}
+                onRefresh={loadAll}
+                api={api}
+              />
+            </div>
+
+            {/* Full Width Sections */}
+            <div style={{ display: "grid", gap: "24px" }}>
+              <div
+                style={{
+                  background: "var(--card-bg)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "12px",
+                  padding: "24px",
+                  boxShadow: "var(--shadow-sm)",
+                }}
+              >
+                <h2 style={{ margin: "0 0 16px", fontSize: "18px", fontWeight: "600", color: "var(--foreground)" }}>
+                  Retention Graph
+                </h2>
+                <p style={{ margin: "0 0 16px", color: "var(--text-secondary)", fontSize: "13px" }}>
+                  Ebbinghaus forgetting curves per topic — past 7 days to exam
+                </p>
+                <RetentionChart cards={cards} sources={sources} sm2State={sm2State} />
+              </div>
+
+              <div
+                style={{
+                  background: "var(--card-bg)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "12px",
+                  padding: "24px",
+                  boxShadow: "var(--shadow-sm)",
+                }}
+              >
+                <h2 style={{ margin: "0 0 16px", fontSize: "18px", fontWeight: "600", color: "var(--foreground)" }}>
+                  Backend Data Snapshot
+                </h2>
+                <BackendSnapshot sources={sources} cards={cards} user={user} />
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
-    </div>
+    </>
   );
 }
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center", color: "var(--text-secondary)" }}>Loading...</div>}>
       <DashboardContent />
     </Suspense>
   );
