@@ -51,24 +51,24 @@ export default function DashboardCardsPanel({
   };
 
   const getDifficultyColor = (difficulty: number) => {
-    if (difficulty <= 2) return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950";
-    if (difficulty <= 4) return "text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950";
-    return "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950";
+    if (difficulty <= 2) return "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900";
+    if (difficulty <= 4) return "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900";
+    return "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900";
   };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-card border border-border rounded-lg p-6 shadow-md"
+      className="bg-card border border-border/50 rounded-xl p-8 shadow-lg"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-        <h2 className="text-2xl font-bold text-foreground">Cards</h2>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
+        <h2 className="text-3xl font-bold text-foreground">Cards</h2>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           <select
             value={selectedSourceId}
             onChange={(e) => onSelectSource(e.target.value)}
-            className="px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background transition-all"
+            className="px-4 py-2 border border-border/50 rounded-lg bg-secondary text-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background transition-all hover:border-accent/50"
           >
             <option value="">All Sources</option>
             {sources.map((source) => (
@@ -96,16 +96,16 @@ export default function DashboardCardsPanel({
             key={card._id}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            whileHover={{ scale: 1.01 }}
-            className="bg-background border border-border rounded-lg p-4 hover:shadow-md transition-all duration-200 group"
+            whileHover={{ scale: 1.02, y: -2 }}
+            className="bg-background border border-border/50 rounded-lg p-5 hover:shadow-lg transition-all duration-300 group hover:border-accent/30"
           >
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-3 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-full">
+                <span className="px-3 py-1 text-xs font-semibold bg-secondary text-secondary-foreground rounded-full">
                   {card.type}
                 </span>
                 <span
-                  className={`px-3 py-1 text-xs font-medium rounded-full ${getDifficultyColor(
+                  className={`px-3 py-1 text-xs font-semibold rounded-lg ${getDifficultyColor(
                     card.difficulty,
                   )}`}
                 >

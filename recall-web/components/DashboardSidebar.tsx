@@ -23,12 +23,15 @@ export default function DashboardSidebar({
   onTabChange,
 }: DashboardSidebarProps) {
   return (
-    <div className="w-64 bg-card border-r border-border h-full flex flex-col">
-      <div className="p-6 flex-1">
-        <h2 className="text-lg font-semibold text-foreground mb-6">
-          Dashboard
-        </h2>
-        <nav className="space-y-2">
+    <div className="w-64 bg-gradient-to-b from-card to-card/90 border-r border-border/50 h-full flex flex-col">
+      <div className="p-8 flex-1">
+        <div className="mb-2">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Recall
+          </h2>
+          <p className="text-xs text-muted-foreground">Learning Dashboard</p>
+        </div>
+        <nav className="space-y-1 mt-8">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -36,22 +39,22 @@ export default function DashboardSidebar({
               <motion.button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    ? "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-lg shadow-primary/20"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                 }`}
-                whileHover={{ scale: 1.02 }}
+                whileHover={{ scale: 1.03, x: 4 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <Icon className="w-5 h-5" />
-                <span className="font-medium">{tab.label}</span>
+                <span>{tab.label}</span>
               </motion.button>
             );
           })}
         </nav>
       </div>
-      <div className="p-6 border-t border-border flex items-center justify-center">
+      <div className="p-6 border-t border-border/50 flex items-center justify-center bg-secondary/30">
         <ThemeToggle />
       </div>
     </div>

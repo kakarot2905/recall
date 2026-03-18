@@ -147,28 +147,34 @@ function DashboardContent() {
     <div className="flex h-screen bg-background">
       <DashboardSidebar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-1 flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-card to-background">
+        <div className="flex items-center justify-between px-8 py-6 border-b border-border/50 bg-card/40 backdrop-blur-sm">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
-            <p className="text-sm text-muted-foreground font-mono">
-              {sources.length} sources • {cards.length} cards
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent mb-2">Dashboard</h1>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">{sources.length}</span> sources • <span className="font-semibold text-foreground">{cards.length}</span> cards
             </p>
           </div>
           {user && (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <button
                 onClick={loadAll}
-                className="px-4 py-2 border border-border rounded-lg bg-background hover:bg-muted text-foreground text-sm font-medium transition-all duration-200 hover:shadow-md"
+                className="px-4 py-2 border border-border/50 rounded-lg bg-secondary hover:bg-secondary/80 text-secondary-foreground text-sm font-semibold transition-all duration-200 hover:shadow-md hover:border-accent/50"
               >
                 Refresh
               </button>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-semibold text-sm">
-                {user.name.charAt(0).toUpperCase()}
+              <div className="flex items-center gap-3 pl-3 border-l border-border/50">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{user.name}</p>
+                  <p className="text-xs text-muted-foreground">{user.email?.split('@')[0]}</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary via-accent to-primary flex items-center justify-center text-primary-foreground font-bold text-sm flex-shrink-0">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
               </div>
             </div>
           )}
         </div>
-        <div className="flex-1 p-8 overflow-auto bg-gradient-to-b from-background to-background/50">
+        <div className="flex-1 p-8 overflow-auto bg-background">
           <motion.div
             key={activeTab}
             initial={{ opacity: 0, y: 8 }}

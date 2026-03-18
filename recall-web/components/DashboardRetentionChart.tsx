@@ -209,16 +209,16 @@ export default function DashboardRetentionChart({
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg p-6 shadow-md">
-      <h2 className="text-2xl font-bold text-foreground mb-6">Retention Curve</h2>
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-muted-foreground mb-2">
+    <div className="bg-card border border-border/50 rounded-xl p-8 shadow-lg">
+      <h2 className="text-3xl font-bold text-foreground mb-8">Retention Curve</h2>
+      <div className="mb-8">
+        <label className="block text-sm font-semibold text-muted-foreground mb-3">
           Filter by Topic
         </label>
         <select
           value={selectedTopic}
           onChange={(e) => setSelectedTopic(e.target.value)}
-          className="px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background transition-all min-w-48"
+          className="px-4 py-2 border border-border/50 rounded-lg bg-secondary text-foreground text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background transition-all min-w-48 hover:border-accent/50"
         >
           <option value="">All Topics</option>
           {topics.map((t) => (
@@ -229,13 +229,13 @@ export default function DashboardRetentionChart({
         </select>
       </div>
 
-      <div className="h-80">
+      <div className="h-96 bg-gradient-to-b from-primary/5 to-accent/5 rounded-lg p-4">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={data}
             margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
           >
-            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+            <CartesianGrid strokeDasharray="3 3" className="opacity-20" stroke="hsl(var(--border))" />
             <XAxis
               dataKey="day"
               tick={{ fontSize: 12 }}

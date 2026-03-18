@@ -48,12 +48,12 @@ export default function DashboardSourcesTable({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-card border border-border rounded-lg p-6 shadow-md"
+      className="bg-card border border-border/50 rounded-xl p-8 shadow-lg"
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
-        <h2 className="text-2xl font-bold text-foreground">Sources</h2>
-        <span className="text-sm text-muted-foreground font-medium">
-          {sources.length} source{sources.length !== 1 ? 's' : ''}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-8">
+        <h2 className="text-3xl font-bold text-foreground">Sources</h2>
+        <span className="text-sm text-muted-foreground font-semibold">
+          <span className="text-foreground">{sources.length}</span> source{sources.length !== 1 ? 's' : ''}
         </span>
       </div>
 
@@ -69,11 +69,11 @@ export default function DashboardSourcesTable({
               key={source._id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              whileHover={{ scale: 1.01 }}
-              className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 group ${
+              whileHover={{ scale: 1.02, y: -2 }}
+              className={`p-5 rounded-lg border cursor-pointer transition-all duration-300 group ${
                 source._id === selectedSourceId
-                  ? "bg-primary/10 border-primary shadow-md"
-                  : "bg-background border-border hover:border-primary/50 hover:shadow-sm"
+                  ? "bg-gradient-to-r from-primary/15 to-accent/10 border-primary/50 shadow-lg shadow-primary/10"
+                  : "bg-background border-border/50 hover:border-accent/40 hover:shadow-md"
               }`}
               onClick={() => onSelect(source._id)}
             >
