@@ -1,54 +1,4 @@
-const screens = {
-  auth: document.getElementById("screenAuth"),
-  home: document.getElementById("screenHome"),
-  setup: document.getElementById("screenSetup"),
-  progress: document.getElementById("screenProgress"),
-  quiz: document.getElementById("screenQuiz"),
-};
-
-const authForm = document.getElementById("authForm");
-const authEmail = document.getElementById("authEmail");
-const authName = document.getElementById("authName");
-const authPassword = document.getElementById("authPassword");
-const authNameField = document.getElementById("authNameField");
-const authEmailError = document.getElementById("authEmailError");
-const authNameError = document.getElementById("authNameError");
-const authPasswordError = document.getElementById("authPasswordError");
-const authFormError = document.getElementById("authFormError");
-const authSubmitBtn = document.getElementById("authSubmitBtn");
-const authToggle = document.getElementById("authToggle");
-const googleAuthBtn = document.getElementById("googleAuthBtn");
-
-const userName = document.getElementById("userName");
-const userEmail = document.getElementById("userEmail");
-const logoutBtn = document.getElementById("logoutBtn");
-const addTopicBtn = document.getElementById("addTopicBtn");
-const dashboardBtn = document.getElementById("dashboardBtn");
-const backToHomeBtn = document.getElementById("backToHomeBtn");
-
-const setupForm = document.getElementById("setupForm");
-const topicInput = document.getElementById("topicInput");
-const notesInput = document.getElementById("notesInput");
-const examDateInput = document.getElementById("examDateInput");
-const topicError = document.getElementById("topicError");
-const notesError = document.getElementById("notesError");
-const dateError = document.getElementById("dateError");
-const formError = document.getElementById("formError");
-const progressStatus = document.getElementById("progressStatus");
-const setupStatus = document.getElementById("setupStatus");
-const generateBtn = document.getElementById("generateBtn");
-const stepRows = Array.from(document.querySelectorAll(".step"));
-const quizMeta = document.getElementById("quizMeta");
-const quizPrompt = document.getElementById("quizPrompt");
-const quizOptions = document.getElementById("quizOptions");
-const quizAnswerInput = document.getElementById("quizAnswerInput");
-const quizFeedback = document.getElementById("quizFeedback");
-const quizSubmitBtn = document.getElementById("quizSubmitBtn");
-const quizNextBtn = document.getElementById("quizNextBtn");
-
-const popupHeader = document.getElementById('popupHeader');
-const headerLogoutBtn = document.getElementById('headerLogoutBtn');
-const quizProgressBar = document.getElementById('quizProgressBar');
+let screens, authForm, authEmail, authName, authPassword, authNameField, authEmailError, authNameError, authPasswordError, authFormError, authSubmitBtn, authToggle, googleAuthBtn, userName, userEmail, logoutBtn, addTopicBtn, dashboardBtn, backToHomeBtn, setupForm, topicInput, notesInput, examDateInput, topicError, notesError, dateError, formError, progressStatus, setupStatus, generateBtn, stepRows, quizMeta, quizPrompt, quizOptions, quizAnswerInput, quizFeedback, quizSubmitBtn, quizNextBtn, popupHeader, headerLogoutBtn, quizProgressBar;
 
 const API_BASE_URL = "http://localhost:3000/api";
 
@@ -114,21 +64,21 @@ function showScreen(name) {
 }
 
 function clearAuthErrors() {
-  authEmailError.textContent = "";
-  authNameError.textContent = "";
-  authPasswordError.textContent = "";
-  authFormError.textContent = "";
+  if (authEmailError) authEmailError.textContent = "";
+  if (authNameError) authNameError.textContent = "";
+  if (authPasswordError) authPasswordError.textContent = "";
+  if (authFormError) authFormError.textContent = "";
 }
 
 function clearErrors() {
-  topicError.textContent = "";
-  notesError.textContent = "";
-  dateError.textContent = "";
-  formError.textContent = "";
+  if (topicError) topicError.textContent = "";
+  if (notesError) notesError.textContent = "";
+  if (dateError) dateError.textContent = "";
+  if (formError) formError.textContent = "";
 }
 
 function setSetupStatus(statusText = "") {
-  setupStatus.textContent = statusText;
+  if (setupStatus) setupStatus.textContent = statusText;
 }
 
 function validateForm() {
@@ -136,17 +86,17 @@ function validateForm() {
   let valid = true;
 
   if (!topicInput.value.trim()) {
-    topicError.textContent = "Topic name is required.";
+    if (topicError) topicError.textContent = "Topic name is required.";
     valid = false;
   }
 
   if (!notesInput.value.trim()) {
-    notesError.textContent = "Notes are required.";
+    if (notesError) notesError.textContent = "Notes are required.";
     valid = false;
   }
 
   if (!examDateInput.value) {
-    dateError.textContent = "Exam date is required.";
+    if (dateError) dateError.textContent = "Exam date is required.";
     valid = false;
   }
 
@@ -331,13 +281,13 @@ async function waitForCompletion(sourceId) {
     });
 
     if (status === "pending") {
-      progressStatus.textContent = "Queued for processing...";
+      if (progressStatus) progressStatus.textContent = "Queued for processing...";
       setStepState(0, -1);
     } else if (status === "processing") {
-      progressStatus.textContent = "Generating study cards...";
+      if (progressStatus) progressStatus.textContent = "Generating study cards...";
       setStepState(1, 0);
     } else if (status === "done") {
-      progressStatus.textContent = "Cards ready.";
+      if (progressStatus) progressStatus.textContent = "Cards ready.";
       setStepState(-1, 2);
       return;
     } else if (status === "failed") {
@@ -427,8 +377,8 @@ async function handleLogout() {
 
 function updateUserDisplay() {
   if (authState.user) {
-    userName.textContent = authState.user.name || "User";
-    userEmail.textContent = authState.user.email || "";
+    if (userName) userName.textContent = authState.user.name || "User";
+    if (userEmail) userEmail.textContent = authState.user.email || "";
   }
 }
 
@@ -447,7 +397,7 @@ async function navigateToDashboard() {
   const token = authState.token || await getFromIndexedDB("recallAuthToken");
 
   if (!token) {
-    authFormError.textContent = "Please login again before opening dashboard.";
+    if (authFormError) authFormError.textContent = "Please login again before opening dashboard.";
     showScreen("auth");
     return;
   }
@@ -460,13 +410,13 @@ function toggleAuthMode() {
   authState.isRegistering = !authState.isRegistering;
 
   if (authState.isRegistering) {
-    authNameField.style.display = "grid";
-    authSubmitBtn.textContent = "Register";
-    authToggle.textContent = "Already have an account? Login";
+    if (authNameField) authNameField.style.display = "grid";
+    if (authSubmitBtn) authSubmitBtn.textContent = "Register";
+    if (authToggle) authToggle.textContent = "Already have an account? Login";
   } else {
-    authNameField.style.display = "none";
-    authSubmitBtn.textContent = "Login";
-    authToggle.textContent = "Don't have an account? Register";
+    if (authNameField) authNameField.style.display = "none";
+    if (authSubmitBtn) authSubmitBtn.textContent = "Login";
+    if (authToggle) authToggle.textContent = "Don't have an account? Register";
   }
 
   clearAuthErrors();
@@ -1017,48 +967,119 @@ function updateQuizProgressBar() {
   }
 }
 
-// Event listeners
-authForm.addEventListener("submit", handleAuth);
-authToggle.addEventListener("click", toggleAuthMode);
-googleAuthBtn.addEventListener("click", handleGoogleAuth);
+// Event listeners - wrapped in DOMContentLoaded to ensure DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  // DOM element declarations with null checks
+  screens = {
+    auth: document.getElementById("screenAuth"),
+    home: document.getElementById("screenHome"),
+    setup: document.getElementById("screenSetup"),
+    progress: document.getElementById("screenProgress"),
+    quiz: document.getElementById("screenQuiz"),
+  };
 
-logoutBtn.addEventListener("click", handleLogout);
-headerLogoutBtn.addEventListener("click", handleLogout);
-addTopicBtn.addEventListener("click", navigateToAddTopic);
-dashboardBtn.addEventListener("click", navigateToDashboard);
-backToHomeBtn.addEventListener("click", () => {
-  updateUserDisplay();
-  showScreen("home");
-});
+  authForm = document.getElementById("authForm");
+  authEmail = document.getElementById("authEmail");
+  authName = document.getElementById("authName");
+  authPassword = document.getElementById("authPassword");
+  authNameField = document.getElementById("authNameField");
+  authEmailError = document.getElementById("authEmailError");
+  authNameError = document.getElementById("authNameError");
+  authPasswordError = document.getElementById("authPasswordError");
+  authFormError = document.getElementById("authFormError");
+  authSubmitBtn = document.getElementById("authSubmitBtn");
+  authToggle = document.getElementById("authToggle");
+  googleAuthBtn = document.getElementById("googleAuthBtn");
 
-quizSubmitBtn.addEventListener("click", checkCurrentAnswer);
-quizNextBtn.addEventListener("click", () => moveToNextCard().catch(console.error));
+  userName = document.getElementById("userName");
+  userEmail = document.getElementById("userEmail");
+  logoutBtn = document.getElementById("logoutBtn");
+  addTopicBtn = document.getElementById("addTopicBtn");
+  dashboardBtn = document.getElementById("dashboardBtn");
+  backToHomeBtn = document.getElementById("backToHomeBtn");
 
-setupForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
+  setupForm = document.getElementById("setupForm");
+  topicInput = document.getElementById("topicInput");
+  notesInput = document.getElementById("notesInput");
+  examDateInput = document.getElementById("examDateInput");
+  topicError = document.getElementById("topicError");
+  notesError = document.getElementById("notesError");
+  dateError = document.getElementById("dateError");
+  formError = document.getElementById("formError");
+  progressStatus = document.getElementById("progressStatus");
+  setupStatus = document.getElementById("setupStatus");
+  generateBtn = document.getElementById("generateBtn");
+  stepRows = Array.from(document.querySelectorAll(".step"));
+  quizMeta = document.getElementById("quizMeta");
+  quizPrompt = document.getElementById("quizPrompt");
+  quizOptions = document.getElementById("quizOptions");
+  quizAnswerInput = document.getElementById("quizAnswerInput");
+  quizFeedback = document.getElementById("quizFeedback");
+  quizSubmitBtn = document.getElementById("quizSubmitBtn");
+  quizNextBtn = document.getElementById("quizNextBtn");
 
-  generateBtn.disabled = true;
-  generateBtn.textContent = "Generating...";
+  popupHeader = document.getElementById('popupHeader');
+  headerLogoutBtn = document.getElementById('headerLogoutBtn');
+  quizProgressBar = document.getElementById('quizProgressBar');
 
-  if (!validateForm()) {
-    generateBtn.disabled = false;
-    generateBtn.textContent = "Generate";
-    return;
+  // Debug: Check for missing elements
+  const missingElements = [];
+  if (!authForm) missingElements.push('authForm');
+  if (!authToggle) missingElements.push('authToggle');
+  if (!googleAuthBtn) missingElements.push('googleAuthBtn');
+  if (!logoutBtn) missingElements.push('logoutBtn');
+  if (!headerLogoutBtn) missingElements.push('headerLogoutBtn');
+  if (!addTopicBtn) missingElements.push('addTopicBtn');
+  if (!dashboardBtn) missingElements.push('dashboardBtn');
+  if (!backToHomeBtn) missingElements.push('backToHomeBtn');
+  if (!quizSubmitBtn) missingElements.push('quizSubmitBtn');
+  if (!quizNextBtn) missingElements.push('quizNextBtn');
+  if (!setupForm) missingElements.push('setupForm');
+
+  if (missingElements.length > 0) {
+    console.warn('Missing DOM elements:', missingElements);
   }
 
-  showScreen("progress");
+  // Add event listeners with null checks
+  if (authForm) authForm.addEventListener("submit", handleAuth);
+  if (authToggle) authToggle.addEventListener("click", toggleAuthMode);
+  if (googleAuthBtn) googleAuthBtn.addEventListener("click", handleGoogleAuth);
 
-  try {
-    await runProgressSimulation();
-    generateBtn.disabled = false;
-    generateBtn.textContent = "Generate";
-  } catch (error) {
-    showScreen("setup");
-    formError.textContent = error.message || "Failed to generate cards";
-    generateBtn.disabled = false;
-    generateBtn.textContent = "Generate";
-  }
+  if (logoutBtn) logoutBtn.addEventListener("click", handleLogout);
+  if (headerLogoutBtn) headerLogoutBtn.addEventListener("click", handleLogout);
+  if (addTopicBtn) addTopicBtn.addEventListener("click", navigateToAddTopic);
+  if (dashboardBtn) dashboardBtn.addEventListener("click", navigateToDashboard);
+  if (backToHomeBtn) backToHomeBtn.addEventListener("click", () => {
+    updateUserDisplay();
+    showScreen("home");
+  });
+
+  if (quizSubmitBtn) quizSubmitBtn.addEventListener("click", checkCurrentAnswer);
+  if (quizNextBtn) quizNextBtn.addEventListener("click", () => moveToNextCard().catch(console.error));
+
+  if (setupForm) setupForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    generateBtn.disabled = true;
+    generateBtn.textContent = "Generating...";
+
+    if (!validateForm()) {
+      generateBtn.disabled = false;
+      generateBtn.textContent = "Generate";
+      return;
+    }
+
+    showScreen("progress");
+
+    try {
+      await runProgressSimulation();
+      generateBtn.disabled = false;
+      generateBtn.textContent = "Generate";
+    } catch (error) {
+      showScreen("setup");
+    }
+  });
+
+  // Initialize app on load
+  initializeApp();
 });
-
-// Initialize app on load
-initializeApp();
