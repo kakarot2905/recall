@@ -1,6 +1,16 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
+import {
+  LayoutDashboard,
+  BookOpen,
+  Target,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Flame,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -8,7 +18,7 @@ interface SidebarProps {
 }
 
 interface NavItem {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   href: string;
   badge?: number;
@@ -18,201 +28,97 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const [expanded, setExpanded] = useState(isOpen);
 
   const navItems: NavItem[] = [
-    { icon: '📊', label: 'Dashboard', href: '/dashboard', badge: 0 },
-    { icon: '📚', label: 'Sources', href: '/dashboard', badge: 0 },
-    { icon: '🎯', label: 'Study', href: '/study' },
-    { icon: '⚙️', label: 'Settings', href: '/settings' },
+    {
+      icon: <LayoutDashboard className="w-5 h-5" />,
+      label: "Dashboard",
+      href: "/dashboard",
+      badge: 0,
+    },
+    {
+      icon: <BookOpen className="w-5 h-5" />,
+      label: "Sources",
+      href: "/dashboard",
+      badge: 0,
+    },
+    { icon: <Target className="w-5 h-5" />, label: "Study", href: "/study" },
+    { icon: <Settings className="w-5 h-5" />, label: "Settings", href: "/settings" },
   ];
 
   return (
     <>
       {/* Sidebar */}
       <aside
-        style={{
-          position: 'fixed',
-          left: 0,
-          top: '64px',
-          width: expanded ? '240px' : '80px',
-          height: 'calc(100vh - 64px)',
-          background: 'var(--sidebar-bg)',
-          borderRight: '1px solid var(--border)',
-          transition: 'width 0.3s ease',
-          zIndex: 50,
-          overflowY: 'auto',
-          padding: '12px 0',
-        }}
+        className={`fixed left-0 top-16 h-[calc(100vh-64px)] bg-muted border-r border-border z-50 overflow-y-auto transition-all duration-300 ${
+          expanded ? "w-56" : "w-20"
+        }`}
       >
-        {/* Toggle Button */}
-        <button
-          onClick={() => setExpanded(!expanded)}
-          style={{
-            width: '100%',
-            padding: '12px',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '12px',
-            color: 'var(--foreground)',
-            fontSize: '18px',
-            transition: 'all 0.2s',
-          }}
-          aria-label="Toggle sidebar"
-        >
-          {expanded ? '◀' : '▶'}
-        </button>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          {expanded && <span className="text-sm font-semibold">Menu</span>}
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="p-1 hover:bg-accent rounded-md transition-colors"
+            aria-label="Toggle sidebar"
+          >
+            {expanded ? (
+              <ChevronLeft className="w-5 h-5" />
+            ) : (
+              <ChevronRight className="w-5 h-5" />
+            )}
+          </button>
+        </div>
 
         {/* Navigation Items */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <nav className="flex flex-col gap-1 p-3">
           {navItems.map((item, index) => (
             <a
               key={index}
               href={item.href}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '12px 16px',
-                color: 'var(--foreground)',
-                textDecoration: 'none',
-                transition: 'all 0.2s',
-                position: 'relative',
-                margin: '0 12px',
-                borderRadius: '8px',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--border)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-              }}
+              className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all hover:bg-accent group ${
+                expanded ? "" : "justify-center"
+              }`}
+              title={!expanded ? item.label : undefined}
             >
-              <span style={{ fontSize: '20px', minWidth: '24px', display: 'flex', justifyContent: 'center' }}>
-                {item.icon}
-              </span>
+              <div className="flex-shrink-0">{item.icon}</div>
               {expanded && (
-                <span style={{ fontSize: '14px', fontWeight: '500', flex: 1 }}>
-                  {item.label}
-                </span>
-              )}
-              {expanded && item.badge !== undefined && item.badge > 0 && (
-                <span
-                  style={{
-                    background: 'var(--primary)',
-                    color: 'white',
-                    borderRadius: '12px',
-                    padding: '2px 8px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                  }}
-                >
-                  {item.badge}
-                </span>
+                <>
+                  <span className="flex-1 text-sm font-medium">{item.label}</span>
+                  {item.badge && item.badge > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      {item.badge}
+                    </Badge>
+                  )}
+                </>
               )}
             </a>
           ))}
         </nav>
 
         {/* Divider */}
-        <div
-          style={{
-            height: '1px',
-            background: 'var(--border)',
-            margin: '16px 12px',
-          }}
-        />
+        <div className="my-4 border-t border-border" />
 
         {/* Quick Stats */}
         {expanded && (
-          <div style={{ padding: '0 12px' }}>
-            <p
-              style={{
-                fontSize: '12px',
-                fontWeight: '600',
-                color: 'var(--text-secondary)',
-                marginBottom: '12px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}
-            >
+          <div className="px-4 pb-4">
+            <p className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">
               Quick Stats
             </p>
-            <div
-              style={{
-                display: 'grid',
-                gap: '8px',
-              }}
-            >
-              <div
-                style={{
-                  background: 'var(--card-bg)',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border)',
-                }}
-              >
-                <p
-                  style={{
-                    margin: '0 0 4px',
-                    fontSize: '12px',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  Today's Goal
-                </p>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: '20px',
-                    fontWeight: '700',
-                    color: 'var(--primary)',
-                  }}
-                >
-                  0/10
-                </p>
+            <div className="space-y-2">
+              <div className="bg-background border border-border rounded-lg p-3">
+                <p className="text-xs text-muted-foreground mb-1">Today's Goal</p>
+                <p className="text-lg font-bold text-primary">0/10</p>
               </div>
-              <div
-                style={{
-                  background: 'var(--card-bg)',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border)',
-                }}
-              >
-                <p
-                  style={{
-                    margin: '0 0 4px',
-                    fontSize: '12px',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  Streak
-                </p>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: '20px',
-                    fontWeight: '700',
-                    color: 'var(--success)',
-                  }}
-                >
-                  0 days
-                </p>
+              <div className="bg-background border border-border rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Flame className="w-3 h-3 text-orange-500" />
+                  <p className="text-xs text-muted-foreground">Streak</p>
+                </div>
+                <p className="text-lg font-bold text-orange-500">0 days</p>
               </div>
             </div>
           </div>
         )}
       </aside>
-
-      {/* Main Content Spacer */}
-      <div
-        style={{
-          marginLeft: expanded ? '240px' : '80px',
-          transition: 'margin-left 0.3s ease',
-        }}
-      />
     </>
   );
 }

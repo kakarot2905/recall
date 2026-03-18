@@ -101,38 +101,19 @@ function DashboardContent() {
   return (
     <>
       <Navbar user={user} onRefresh={loadAll} onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-      <div style={{ display: "flex", minHeight: "calc(100vh - 64px)" }}>
+      <div className="flex min-h-screen pt-16">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         
-        <main
-          style={{
-            flex: 1,
-            padding: "24px",
-            background: "var(--background)",
-            marginLeft: sidebarOpen ? "240px" : "80px",
-            transition: "margin-left 0.3s ease",
-          }}
-        >
-          <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <main className={`flex-1 p-6 bg-background transition-all duration-300 ${sidebarOpen ? "pl-56" : "pl-20"}`}>
+          <div className="max-w-6xl mx-auto space-y-8">
             {/* Page Header */}
-            <div style={{ marginBottom: "32px" }}>
-              <h2
-                style={{
-                  margin: "0 0 8px",
-                  fontSize: "28px",
-                  fontWeight: "700",
-                  color: "var(--foreground)",
-                }}
-              >
-                Dashboard
-              </h2>
-              <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "14px" }}>
-                Track your spaced repetition progress and manage learning sources
-              </p>
+            <div>
+              <h2 className="text-3xl font-bold text-foreground mb-2">Dashboard</h2>
+              <p className="text-muted-foreground">Track your spaced repetition progress and manage learning sources</p>
             </div>
 
             {/* Main Content Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "24px" }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <SourcesTable
                 sources={sources}
                 selectedSourceId={selectedSourceId}
@@ -149,38 +130,18 @@ function DashboardContent() {
               />
             </div>
 
-            {/* Full Width Sections */}
-            <div style={{ display: "grid", gap: "24px" }}>
-              <div
-                style={{
-                  background: "var(--card-bg)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "12px",
-                  padding: "24px",
-                  boxShadow: "var(--shadow-sm)",
-                }}
-              >
-                <h2 style={{ margin: "0 0 16px", fontSize: "18px", fontWeight: "600", color: "var(--foreground)" }}>
-                  Retention Graph
-                </h2>
-                <p style={{ margin: "0 0 16px", color: "var(--text-secondary)", fontSize: "13px" }}>
+            {/* Charts Section */}
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold mb-4">Retention Graph</h3>
+                <p className="text-sm text-muted-foreground mb-4">
                   Ebbinghaus forgetting curves per topic — past 7 days to exam
                 </p>
                 <RetentionChart cards={cards} sources={sources} sm2State={sm2State} />
               </div>
 
-              <div
-                style={{
-                  background: "var(--card-bg)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "12px",
-                  padding: "24px",
-                  boxShadow: "var(--shadow-sm)",
-                }}
-              >
-                <h2 style={{ margin: "0 0 16px", fontSize: "18px", fontWeight: "600", color: "var(--foreground)" }}>
-                  Backend Data Snapshot
-                </h2>
+              <div>
+                <h3 className="text-xl font-semibold mb-4">Backend Data Snapshot</h3>
                 <BackendSnapshot sources={sources} cards={cards} user={user} />
               </div>
             </div>

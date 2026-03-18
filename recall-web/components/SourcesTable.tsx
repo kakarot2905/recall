@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 interface Props {
   sources: any[];
@@ -64,317 +69,139 @@ export default function SourcesTable({
     failed: "#b42318",
   };
 
+  const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+      case "done":
+        return "default";
+      case "processing":
+        return "secondary";
+      case "failed":
+        return "destructive";
+      default:
+        return "outline";
+    }
+  };
+
   return (
-    <div
-      style={{
-        background: "var(--card-bg)",
-        border: "1px solid var(--border)",
-        borderRadius: "12px",
-        padding: "24px",
-        boxShadow: "var(--shadow-sm)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "20px",
-        }}
-      >
-        <h2 style={{ margin: 0, fontSize: "18px", fontWeight: "600", color: "var(--foreground)" }}>Sources</h2>
-        <span style={{ color: "var(--text-secondary)", fontSize: "13px" }}>
-          {sources.length} source(s)
-        </span>
-      </div>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Sources</CardTitle>
+            <CardDescription>Manage your learning sources</CardDescription>
+          </div>
+          <Badge variant="secondary">{sources.length} source(s)</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Add Source Form */}
+        <form onSubmit={handleAdd} className="space-y-4 p-4 bg-muted rounded-lg border border-border">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label htmlFor="topic" className="text-sm font-medium">Topic</label>
+              <Input
+                id="topic"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="e.g. Data Structures"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="examDate" className="text-sm font-medium">Exam Date</label>
+              <Input
+                id="examDate"
+                type="date"
+                value={examDate}
+                onChange={(e) => setExamDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="notes" className="text-sm font-medium">Notes</label>
+            <textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Optional notes"
+              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              rows={3}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button type="submit" className="w-full md:w-auto">
+              Add Source
+            </Button>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+          </div>
+        </form>
 
-      <form
-        onSubmit={handleAdd}
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "12px",
-          marginBottom: "20px",
-          padding: "20px",
-          background: "var(--sidebar-bg)",
-          borderRadius: "8px",
-          border: "1px solid var(--border)",
-        }}
-      >
-        <div>
-          <label
-            style={{
-              fontSize: "12px",
-              color: "var(--text-secondary)",
-              display: "block",
-              marginBottom: "6px",
-              fontWeight: "500",
-            }}
-          >
-            Topic
-          </label>
-          <input
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            placeholder="e.g. Data Structures"
-            style={{
-              width: "100%",
-              border: "1px solid var(--border)",
-              borderRadius: "6px",
-              padding: "8px 12px",
-              fontSize: "13px",
-              boxSizing: "border-box",
-              background: "var(--card-bg)",
-              color: "var(--foreground)",
-              transition: "all 0.2s",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--primary)";
-              e.currentTarget.style.outline = "none";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--border)";
-            }}
-          />
-        </div>
-        <div>
-          <label
-            style={{
-              fontSize: "12px",
-              color: "var(--text-secondary)",
-              display: "block",
-              marginBottom: "6px",
-              fontWeight: "500",
-            }}
-          >
-            Exam Date
-          </label>
-          <input
-            type="date"
-            value={examDate}
-            onChange={(e) => setExamDate(e.target.value)}
-            style={{
-              width: "100%",
-              border: "1px solid var(--border)",
-              borderRadius: "6px",
-              padding: "8px 12px",
-              fontSize: "13px",
-              boxSizing: "border-box",
-              background: "var(--card-bg)",
-              color: "var(--foreground)",
-              transition: "all 0.2s",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--primary)";
-              e.currentTarget.style.outline = "none";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--border)";
-            }}
-          />
-        </div>
-        <div style={{ gridColumn: "1 / -1" }}>
-          <label
-            style={{
-              fontSize: "12px",
-              color: "var(--text-secondary)",
-              display: "block",
-              marginBottom: "6px",
-              fontWeight: "500",
-            }}
-          >
-            Notes
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Optional notes"
-            style={{
-              width: "100%",
-              border: "1px solid var(--border)",
-              borderRadius: "6px",
-              padding: "8px 12px",
-              fontSize: "13px",
-              minHeight: "60px",
-              boxSizing: "border-box",
-              resize: "vertical",
-              background: "var(--card-bg)",
-              color: "var(--foreground)",
-              transition: "all 0.2s",
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--primary)";
-              e.currentTarget.style.outline = "none";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--border)";
-            }}
-          />
-        </div>
-        <div>
-          <button
-            type="submit"
-            style={{
-              border: "none",
-              background: "var(--primary)",
-              color: "white",
-              borderRadius: "6px",
-              padding: "8px 16px",
-              fontWeight: "600",
-              cursor: "pointer",
-              fontSize: "13px",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "var(--primary-dark)";
-              e.currentTarget.style.transform = "translateY(-1px)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "var(--primary)";
-              e.currentTarget.style.transform = "translateY(0)";
-            }}
-          >
-            Add Source
-          </button>
-        </div>
-        {error && (
-          <p
-            style={{
-              color: "var(--error)",
-              fontSize: "12px",
-              margin: 0,
-              gridColumn: "1 / -1",
-            }}
-          >
-            {error}
-          </p>
-        )}
-      </form>
-
-      <div style={{ overflowX: "auto", maxHeight: "300px", overflowY: "auto" }}>
-        <table
-          style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}
-        >
-          <thead>
-            <tr style={{ background: "var(--sidebar-bg)" }}>
-              {["Topic", "Status", "Cards", "Exam", "Actions"].map((h) => (
-                <th
-                  key={h}
-                  style={{
-                    textAlign: "left",
-                    padding: "12px",
-                    borderBottom: "1px solid var(--border)",
-                    color: "var(--text-secondary)",
-                    fontWeight: "600",
-                    fontSize: "12px",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {sources.length === 0 && (
-              <tr>
-                <td colSpan={5} style={{ padding: "12px", color: "var(--text-secondary)", textAlign: "center" }}>
-                  No sources yet.
-                </td>
+        {/* Sources Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Topic</th>
+                <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Status</th>
+                <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Cards</th>
+                <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Exam Date</th>
+                <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Actions</th>
               </tr>
-            )}
-            {sources.map((source) => (
-              <tr
-                key={source._id}
-                onClick={() => onSelect(source._id)}
-                style={{
-                  background: source._id === selectedSourceId ? "var(--sidebar-bg)" : undefined,
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                  borderBottom: "1px solid var(--border)",
-                }}
-                onMouseEnter={(e) => {
-                  if (source._id !== selectedSourceId) {
-                    e.currentTarget.style.background = "var(--sidebar-bg)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (source._id !== selectedSourceId) {
-                    e.currentTarget.style.background = "";
-                  }
-                }}
-              >
-                <td style={{ padding: "12px", borderBottom: "1px solid var(--border)", color: "var(--foreground)" }}>
-                  <strong>{source.topic}</strong>
-                  <div style={{ color: "var(--text-secondary)", fontSize: "12px", marginTop: "4px" }}>
-                    {source.notes?.slice(0, 40)}
-                  </div>
-                </td>
-                <td style={{ padding: "12px", borderBottom: "1px solid var(--border)" }}>
-                  <span
-                    style={{
-                      fontWeight: "700",
-                      fontSize: "12px",
-                      textTransform: "uppercase",
-                      color: statusColors[source.status] || "var(--text-secondary)",
-                      display: "inline-block",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                      background: statusColors[source.status] ? `${statusColors[source.status]}15` : "transparent",
-                    }}
+            </thead>
+            <tbody>
+              {sources.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-muted-foreground">
+                    No sources yet. Add one to get started!
+                  </td>
+                </tr>
+              ) : (
+                sources.map((source) => (
+                  <tr
+                    key={source._id}
+                    onClick={() => onSelect(source._id)}
+                    className={`border-b border-border cursor-pointer transition-colors hover:bg-accent ${
+                      source._id === selectedSourceId ? "bg-accent" : ""
+                    }`}
                   >
-                    {source.status}
-                  </span>
-                </td>
-                <td style={{ padding: "12px", borderBottom: "1px solid var(--border)", color: "var(--foreground)" }}>
-                  {source.cardCount || 0}
-                </td>
-                <td
-                  style={{
-                    padding: "12px",
-                    borderBottom: "1px solid var(--border)",
-                    fontSize: "12px",
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  {source.examDate
-                    ? new Date(source.examDate).toLocaleDateString()
-                    : "—"}
-                </td>
-                <td
-                  style={{ padding: "12px", borderBottom: "1px solid var(--border)" }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    onClick={() => handleDelete(source._id)}
-                    style={{
-                      border: "1px solid rgba(239, 68, 68, 0.3)",
-                      color: "var(--error)",
-                      background: "rgba(239, 68, 68, 0.1)",
-                      borderRadius: "6px",
-                      padding: "4px 8px",
-                      fontSize: "12px",
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "rgba(239, 68, 68, 0.2)";
-                      e.currentTarget.style.borderColor = "var(--error)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)";
-                      e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.3)";
-                    }}
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+                    <td className="py-3 px-4">
+                      <div>
+                        <p className="font-semibold">{source.topic}</p>
+                        {source.notes && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {source.notes.slice(0, 40)}
+                            {source.notes.length > 40 ? "..." : ""}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge variant={getStatusVariant(source.status)}>
+                        {source.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4">{source.cardCount || 0}</td>
+                    <td className="py-3 px-4 text-sm">
+                      {source.examDate
+                        ? new Date(source.examDate).toLocaleDateString()
+                        : "—"}
+                    </td>
+                    <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(source._id)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

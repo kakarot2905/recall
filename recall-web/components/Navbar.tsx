@@ -1,210 +1,88 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import React, { useState } from "react";
+import { Menu, LogOut, Settings, RotateCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface NavbarProps {
   user?: any;
-  onMenuClick?: () => void;
-  onRefresh?: () => void;
+  onRefresh: () => void;
+  onMenuClick: () => void;
 }
 
-export default function Navbar({ user, onMenuClick, onRefresh }: NavbarProps) {
-  const [showProfile, setShowProfile] = useState(false);
+export default function Navbar({ user, onRefresh, onMenuClick }: NavbarProps) {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("recallDashboardToken");
+    window.location.href = "/";
+  };
 
   return (
-    <nav
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        background: 'var(--card-bg)',
-        borderBottom: '1px solid var(--border)',
-        boxShadow: 'var(--shadow-sm)',
-        padding: '0 var(--spacing-lg)',
-        height: '64px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}
-    >
-      {/* Left - Logo and Menu Toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+    <nav className="fixed top-0 left-0 right-0 h-16 bg-background border-b border-border z-50 flex items-center justify-between px-6 shadow-sm">
+      {/* Left side - Logo and menu toggle */}
+      <div className="flex items-center gap-4">
         <button
           onClick={onMenuClick}
-          style={{
-            display: 'none',
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            padding: '8px',
-            color: 'var(--foreground)',
-            fontSize: '20px',
-          }}
-          className="md:hidden"
-          aria-label="Toggle menu"
+          className="p-2 hover:bg-accent rounded-md transition-colors"
+          aria-label="Toggle sidebar"
         >
-          ☰
+          <Menu className="w-5 h-5" />
         </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              background: 'var(--primary)',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: '18px',
-            }}
-          >
-            R
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-sm">R</span>
           </div>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: '20px',
-              fontWeight: '700',
-              color: 'var(--foreground)',
-              letterSpacing: '-0.5px',
-            }}
-          >
-            Recall
-          </h1>
+          <h1 className="font-bold text-lg hidden sm:inline">Recall</h1>
         </div>
       </div>
 
-      {/* Right - Actions and Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <button
+      {/* Right side - Refresh and user menu */}
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onRefresh}
-          style={{
-            background: 'var(--card-bg)',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-            padding: '8px 16px',
-            fontSize: '14px',
-            fontWeight: '500',
-            cursor: 'pointer',
-            color: 'var(--foreground)',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--sidebar-bg)';
-            e.currentTarget.style.borderColor = 'var(--primary)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'var(--card-bg)';
-            e.currentTarget.style.borderColor = 'var(--border)';
-          }}
+          title="Refresh data"
         >
-          ↻ Refresh
-        </button>
+          <RotateCw className="w-5 h-5" />
+        </Button>
 
-        {/* Profile Menu */}
-        <div style={{ position: 'relative' }}>
+        {/* User dropdown */}
+        <div className="relative">
           <button
-            onClick={() => setShowProfile(!showProfile)}
-            style={{
-              background: 'var(--primary)',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontSize: '14px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              color: 'white',
-              transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--primary-dark)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--primary)';
-            }}
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-accent transition-colors"
           >
-            <div
-              style={{
-                width: '24px',
-                height: '24px',
-                background: 'rgba(255,255,255,0.3)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '12px',
-              }}
-            >
-              👤
+            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+              <span className="text-primary-foreground text-sm font-semibold">
+                {user?.name?.[0]?.toUpperCase() || "U"}
+              </span>
             </div>
-            {user?.name ? user.name.split(' ')[0] : 'User'}
+            <span className="text-sm font-medium hidden sm:inline">
+              {user?.name || "User"}
+            </span>
           </button>
 
-          {showProfile && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '100%',
-                right: 0,
-                marginTop: '8px',
-                background: 'var(--card-bg)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                boxShadow: 'var(--shadow-md)',
-                minWidth: '200px',
-                zIndex: 1000,
-              }}
-            >
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--foreground)' }}>
-                  {user?.name}
-                </p>
-                <p
-                  style={{
-                    margin: '4px 0 0',
-                    fontSize: '12px',
-                    color: 'var(--text-secondary)',
-                  }}
-                >
-                  {user?.email}
-                </p>
-              </div>
-              <div style={{ padding: '8px' }}>
-                <button
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    background: 'transparent',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    color: 'var(--error)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--sidebar-bg)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                  onClick={() => {
-                    sessionStorage.removeItem('recallDashboardToken');
-                    window.location.href = '/';
-                  }}
-                >
-                  Logout
-                </button>
-              </div>
+          {/* Dropdown menu */}
+          {dropdownOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-lg py-1 z-50">
+              <button
+                onClick={() => {
+                  setDropdownOpen(false);
+                }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-accent flex items-center gap-2 transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                Settings
+              </button>
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-destructive/10 text-destructive flex items-center gap-2 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
             </div>
           )}
         </div>

@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { Trash2, BookMarked } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface Props {
   cards: any[];
@@ -34,138 +38,81 @@ export default function CardsPanel({
   }
 
   return (
-    <div
-      style={{
-        background: "var(--card-bg)",
-        border: "1px solid var(--border)",
-        borderRadius: "12px",
-        padding: "24px",
-        boxShadow: "var(--shadow-sm)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "20px",
-        }}
-      >
-        <h2 style={{ margin: 0, fontSize: "18px", fontWeight: "600", color: "var(--foreground)" }}>Cards</h2>
-        <span style={{ color: "var(--text-secondary)", fontSize: "13px" }}>
-          {selectedSourceId
-            ? `${selectedCards.length} card(s)`
-            : "Pick a source"}
-        </span>
-      </div>
-
-      {error && <p style={{ color: "var(--error)", fontSize: "12px", marginBottom: "12px" }}>{error}</p>}
-
-      {!selectedSourceId && (
-        <p style={{ color: "var(--text-secondary)", fontSize: "13px", textAlign: "center", padding: "24px", background: "var(--sidebar-bg)", borderRadius: "8px" }}>
-          Select a source from the left panel.
-        </p>
-      )}
-
-      <div
-        style={{ display: "grid", gap: "12px", maxHeight: "500px", overflowY: "auto" }}
-      >
-        {selectedCards.map((card) => (
-          <div
-            key={card._id}
-            style={{
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              padding: "12px",
-              background: "var(--sidebar-bg)",
-              transition: "all 0.2s",
-              cursor: "default",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "var(--primary)";
-              e.currentTarget.style.background = "var(--card-bg)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--border)";
-              e.currentTarget.style.background = "var(--sidebar-bg)";
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "start",
-                marginBottom: "8px",
-                gap: "8px",
-              }}
-            >
-              <div style={{ display: "flex", gap: "6px", flex: 1, flexWrap: "wrap" }}>
-                <span
-                  style={{
-                    border: "1px solid var(--border)",
-                    borderRadius: "12px",
-                    padding: "3px 10px",
-                    fontSize: "11px",
-                    color: "var(--text-secondary)",
-                    background: "var(--card-bg)",
-                    fontWeight: "500",
-                  }}
-                >
-                  {card.type}
-                </span>
-                <span
-                  style={{
-                    border: "1px solid var(--border)",
-                    borderRadius: "12px",
-                    padding: "3px 10px",
-                    fontSize: "11px",
-                    color: "var(--text-secondary)",
-                    background: "var(--card-bg)",
-                    fontWeight: "500",
-                  }}
-                >
-                  Difficulty {card.difficulty}
-                </span>
-              </div>
-              <button
-                onClick={() => handleDelete(card._id)}
-                style={{
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
-                  color: "var(--error)",
-                  background: "rgba(239, 68, 68, 0.1)",
-                  borderRadius: "6px",
-                  padding: "3px 8px",
-                  fontSize: "11px",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "rgba(239, 68, 68, 0.2)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)";
-                }}
-              >
-                Delete
-              </button>
-            </div>
-            <p style={{ margin: "0 0 6px", fontWeight: "600", fontSize: "13px", color: "var(--foreground)" }}>
-              {card.question || card.content || "—"}
-            </p>
-            {Array.isArray(card.options) && card.options.length > 0 && (
-              <p style={{ margin: "0 0 3px", color: "var(--text-secondary)", fontSize: "12px" }}>
-                <strong>Options:</strong> {card.options.join(" | ")}
-              </p>
-            )}
-            {(card.correct || card.answer) && (
-              <p style={{ margin: "0 0 0", color: "var(--text-secondary)", fontSize: "12px" }}>
-                <strong>Answer:</strong> {card.correct || card.answer}
-              </p>
-            )}
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <BookMarked className="w-5 h-5" />
+              Cards
+            </CardTitle>
+            <CardDescription>
+              {selectedSourceId
+                ? `${selectedCards.length} card(s) from selected source`
+                : "Select a source to view cards"}
+            </CardDescription>
           </div>
-        ))}
-      </div>
-    </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {error && (
+          <p className="text-sm text-destructive mb-4">{error}</p>
+        )}
+
+        {!selectedSourceId ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <BookMarked className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>Select a source from the left panel to view its cards.</p>
+          </div>
+        ) : selectedCards.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <p>No cards in this source yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {selectedCards.map((card) => (
+              <div
+                key={card._id}
+                className="border border-border rounded-lg p-4 bg-muted hover:bg-accent transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      {card.type}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {`Level ${card.difficulty || 1}`}
+                    </Badge>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(card._id)}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <p className="font-semibold text-sm">
+                    {card.question || card.content || "—"}
+                  </p>
+                  {Array.isArray(card.options) && card.options.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-semibold">Options:</span> {card.options.join(" | ")}
+                    </p>
+                  )}
+                  {(card.correct || card.answer) && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-semibold">Answer:</span> {card.correct || card.answer}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
