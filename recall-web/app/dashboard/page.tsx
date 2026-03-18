@@ -80,7 +80,7 @@ function DashboardContent() {
 
   if (loading)
     return (
-      <div style={{ padding: 40, fontFamily: "system-ui, sans-serif", color: "var(--text-secondary)" }}>
+      <div style={{ padding: 40, fontFamily: "system-ui, sans-serif", color: "#64748b" }}>
         Loading...
       </div>
     );
@@ -91,7 +91,7 @@ function DashboardContent() {
         style={{
           padding: 40,
           fontFamily: "system-ui, sans-serif",
-          color: "var(--error)",
+          color: "#dc2626",
         }}
       >
         {error}
@@ -104,12 +104,12 @@ function DashboardContent() {
       <div className="flex min-h-screen pt-16">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         
-        <main className={`flex-1 p-6 bg-background transition-all duration-300 ${sidebarOpen ? "pl-56" : "pl-20"}`}>
+        <main className={`flex-1 p-6 bg-white transition-all duration-300 ${sidebarOpen ? "pl-56" : "pl-20"}`}>
           <div className="max-w-6xl mx-auto space-y-8">
             {/* Page Header */}
             <div>
-              <h2 className="text-3xl font-bold text-foreground mb-2">Dashboard</h2>
-              <p className="text-muted-foreground">Track your spaced repetition progress and manage learning sources</p>
+              <h2 className="text-3xl font-bold text-slate-900 mb-2">Dashboard</h2>
+              <p className="text-slate-600">Track your spaced repetition progress and manage learning sources</p>
             </div>
 
             {/* Main Content Grid */}
@@ -134,7 +134,7 @@ function DashboardContent() {
             <div className="space-y-6">
               <div>
                 <h3 className="text-xl font-semibold mb-4">Retention Graph</h3>
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-sm text-slate-600 mb-4">
                   Ebbinghaus forgetting curves per topic — past 7 days to exam
                 </p>
                 <RetentionChart cards={cards} sources={sources} sm2State={sm2State} />
@@ -154,7 +154,7 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center", color: "var(--text-secondary)" }}>Loading...</div>}>
+    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>Loading...</div>}>
       <DashboardContent />
     </Suspense>
   );
