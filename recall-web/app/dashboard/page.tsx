@@ -36,7 +36,7 @@ function DashboardContent() {
   useEffect(() => {
     if (token === null) return;
     if (!token) {
-      setError("Missing auth token. Open dashboard from extension popup.");
+      // setError("Missing auth token. Open dashboard from extension popup.");
       setLoading(false);
       return;
     }
