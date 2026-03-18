@@ -54,7 +54,7 @@ function DashboardContent() {
 
   async function loadAll() {
     try {
-      setLoading(true);
+      // setLoading(true);
       const [dashboardData, progressData] = await Promise.all([
         api("/api/dashboard-data"),
         api("/api/progress"),
@@ -69,7 +69,7 @@ function DashboardContent() {
         setSelectedSourceId(dashboardData.sources[0]._id);
       }
     } catch (err: any) {
-      setError(err.message || "Failed to load dashboard");
+      // setError(err.message || "Failed to load dashboard");
     } finally {
       setLoading(false);
     }
