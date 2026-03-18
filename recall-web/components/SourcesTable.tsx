@@ -94,7 +94,7 @@ export default function SourcesTable({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Add Source Form */}
-        <form onSubmit={handleAdd} className="space-y-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+        <form onSubmit={handleAdd} className="space-y-4 p-4 bg-muted rounded-lg border border-border">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label htmlFor="topic" className="text-sm font-medium">Topic</label>
@@ -122,7 +122,7 @@ export default function SourcesTable({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Optional notes"
-              className="w-full px-3 py-2 border border-slate-300 rounded-md bg-white text-slate-900 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               rows={3}
             />
           </div>
@@ -130,7 +130,7 @@ export default function SourcesTable({
             <Button type="submit" className="w-full md:w-auto">
               Add Source
             </Button>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
         </form>
 
@@ -138,18 +138,18 @@ export default function SourcesTable({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="text-left py-3 px-4 font-semibold text-slate-600">Topic</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-600">Status</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-600">Cards</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-600">Exam Date</th>
-                <th className="text-left py-3 px-4 font-semibold text-slate-600">Actions</th>
+              <tr className="border-b border-border">
+                <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Topic</th>
+                <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Status</th>
+                <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Cards</th>
+                <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Exam Date</th>
+                <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {sources.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-500">
+                  <td colSpan={5} className="py-8 text-center text-muted-foreground">
                     No sources yet. Add one to get started!
                   </td>
                 </tr>
@@ -158,15 +158,15 @@ export default function SourcesTable({
                   <tr
                     key={source._id}
                     onClick={() => onSelect(source._id)}
-                    className={`border-b border-slate-200 cursor-pointer transition-colors hover:bg-blue-50 ${
-                      source._id === selectedSourceId ? "bg-blue-50" : ""
+                    className={`border-b border-border cursor-pointer transition-colors hover:bg-accent ${
+                      source._id === selectedSourceId ? "bg-accent" : ""
                     }`}
                   >
                     <td className="py-3 px-4">
                       <div>
                         <p className="font-semibold">{source.topic}</p>
                         {source.notes && (
-                          <p className="text-xs text-slate-500 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {source.notes.slice(0, 40)}
                             {source.notes.length > 40 ? "..." : ""}
                           </p>
@@ -187,7 +187,7 @@ export default function SourcesTable({
                     <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleDelete(source._id)}
-                        className="text-red-600 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded text-sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2 py-1 rounded text-sm"
                       >
                         🗑️ Delete
                       </button>

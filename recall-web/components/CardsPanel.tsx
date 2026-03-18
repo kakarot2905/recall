@@ -54,16 +54,16 @@ export default function CardsPanel({
       </CardHeader>
       <CardContent>
         {error && (
-          <p className="text-sm text-red-600 mb-4">{error}</p>
+          <p className="text-sm text-destructive mb-4">{error}</p>
         )}
 
         {!selectedSourceId ? (
-          <div className="text-center py-12 text-slate-500">
+          <div className="text-center py-12 text-muted-foreground">
             <div className="text-4xl mb-4 opacity-50">📚</div>
             <p>Select a source from the left panel to view its cards.</p>
           </div>
         ) : selectedCards.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">
+          <div className="text-center py-12 text-muted-foreground">
             <p>No cards in this source yet.</p>
           </div>
         ) : (
@@ -71,7 +71,7 @@ export default function CardsPanel({
             {selectedCards.map((card) => (
               <div
                 key={card._id}
-                className="border border-slate-200 rounded-lg p-4 bg-slate-50 hover:bg-blue-50 transition-colors"
+                className="border border-border rounded-lg p-4 bg-muted hover:bg-accent transition-colors"
               >
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex flex-wrap gap-2">
@@ -84,7 +84,7 @@ export default function CardsPanel({
                   </div>
                   <button
                     onClick={() => handleDelete(card._id)}
-                    className="text-red-600 hover:text-red-600 hover:bg-red-50 px-2 py-1 rounded text-sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2 py-1 rounded text-sm"
                   >
                     🗑️
                   </button>
@@ -94,12 +94,12 @@ export default function CardsPanel({
                     {card.question || card.content || "—"}
                   </p>
                   {Array.isArray(card.options) && card.options.length > 0 && (
-                    <p className="text-xs text-slate-600">
+                    <p className="text-xs text-muted-foreground">
                       <span className="font-semibold">Options:</span> {card.options.join(" | ")}
                     </p>
                   )}
                   {(card.correct || card.answer) && (
-                    <p className="text-xs text-slate-600">
+                    <p className="text-xs text-muted-foreground">
                       <span className="font-semibold">Answer:</span> {card.correct || card.answer}
                     </p>
                   )}
