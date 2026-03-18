@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { Menu, LogOut, Settings, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NavbarProps {
@@ -24,10 +23,10 @@ export default function Navbar({ user, onRefresh, onMenuClick }: NavbarProps) {
       <div className="flex items-center gap-4">
         <button
           onClick={onMenuClick}
-          className="p-2 hover:bg-accent rounded-md transition-colors"
+          className="p-2 hover:bg-accent rounded-md transition-colors text-lg"
           aria-label="Toggle sidebar"
         >
-          <Menu className="w-5 h-5" />
+          ☰
         </button>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
@@ -39,14 +38,13 @@ export default function Navbar({ user, onRefresh, onMenuClick }: NavbarProps) {
 
       {/* Right side - Refresh and user menu */}
       <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
           onClick={onRefresh}
+          className="p-2 hover:bg-accent rounded-md transition-colors text-lg"
           title="Refresh data"
         >
-          <RotateCw className="w-5 h-5" />
-        </Button>
+          ↻
+        </button>
 
         {/* User dropdown */}
         <div className="relative">
@@ -71,17 +69,15 @@ export default function Navbar({ user, onRefresh, onMenuClick }: NavbarProps) {
                 onClick={() => {
                   setDropdownOpen(false);
                 }}
-                className="w-full text-left px-4 py-2 text-sm hover:bg-accent flex items-center gap-2 transition-colors"
+                className="w-full text-left px-4 py-2 text-sm hover:bg-accent transition-colors"
               >
-                <Settings className="w-4 h-4" />
-                Settings
+                ⚙️ Settings
               </button>
               <button
                 onClick={handleLogout}
-                className="w-full text-left px-4 py-2 text-sm hover:bg-destructive/10 text-destructive flex items-center gap-2 transition-colors"
+                className="w-full text-left px-4 py-2 text-sm hover:bg-destructive/10 text-destructive transition-colors"
               >
-                <LogOut className="w-4 h-4" />
-                Logout
+                🚪 Logout
               </button>
             </div>
           )}

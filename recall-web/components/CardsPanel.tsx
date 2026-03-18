@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Trash2, BookMarked } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,8 +42,7 @@ export default function CardsPanel({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <BookMarked className="w-5 h-5" />
-              Cards
+              📚 Cards
             </CardTitle>
             <CardDescription>
               {selectedSourceId
@@ -61,7 +59,7 @@ export default function CardsPanel({
 
         {!selectedSourceId ? (
           <div className="text-center py-12 text-muted-foreground">
-            <BookMarked className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <div className="text-4xl mb-4 opacity-50">📚</div>
             <p>Select a source from the left panel to view its cards.</p>
           </div>
         ) : selectedCards.length === 0 ? (
@@ -84,14 +82,12 @@ export default function CardsPanel({
                       {`Level ${card.difficulty || 1}`}
                     </Badge>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <button
                     onClick={() => handleDelete(card._id)}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2 py-1 rounded text-sm"
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                    🗑️
+                  </button>
                 </div>
                 <div className="space-y-2">
                   <p className="font-semibold text-sm">

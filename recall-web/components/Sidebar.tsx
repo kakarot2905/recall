@@ -1,15 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import {
-  LayoutDashboard,
-  BookOpen,
-  Target,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-  Flame,
-} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface SidebarProps {
@@ -18,7 +9,7 @@ interface SidebarProps {
 }
 
 interface NavItem {
-  icon: React.ReactNode;
+  icon: string;
   label: string;
   href: string;
   badge?: number;
@@ -29,19 +20,19 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
   const navItems: NavItem[] = [
     {
-      icon: <LayoutDashboard className="w-5 h-5" />,
+      icon: "📊",
       label: "Dashboard",
       href: "/dashboard",
       badge: 0,
     },
     {
-      icon: <BookOpen className="w-5 h-5" />,
+      icon: "📚",
       label: "Sources",
       href: "/dashboard",
       badge: 0,
     },
-    { icon: <Target className="w-5 h-5" />, label: "Study", href: "/study" },
-    { icon: <Settings className="w-5 h-5" />, label: "Settings", href: "/settings" },
+    { icon: "🎯", label: "Study", href: "/study" },
+    { icon: "⚙️", label: "Settings", href: "/settings" },
   ];
 
   return (
@@ -60,11 +51,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             className="p-1 hover:bg-accent rounded-md transition-colors"
             aria-label="Toggle sidebar"
           >
-            {expanded ? (
-              <ChevronLeft className="w-5 h-5" />
-            ) : (
-              <ChevronRight className="w-5 h-5" />
-            )}
+            {expanded ? "◀" : "▶"}
           </button>
         </div>
 
@@ -110,7 +97,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
               </div>
               <div className="bg-background border border-border rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-1">
-                  <Flame className="w-3 h-3 text-orange-500" />
+                  <span className="text-orange-500">🔥</span>
                   <p className="text-xs text-muted-foreground">Streak</p>
                 </div>
                 <p className="text-lg font-bold text-orange-500">0 days</p>
