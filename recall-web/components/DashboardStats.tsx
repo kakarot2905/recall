@@ -27,15 +27,15 @@ const stats = [
     label: "Total Sources",
     value: (props: DashboardStatsProps) => props.sources.length,
     icon: BookOpen,
-    color: "text-blue-600",
-    bgColor: "bg-blue-100",
+    color: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-50 dark:bg-blue-950",
   },
   {
     label: "Total Cards",
     value: (props: DashboardStatsProps) => props.cards.length,
     icon: Database,
-    color: "text-green-600",
-    bgColor: "bg-green-100",
+    color: "text-green-600 dark:text-green-400",
+    bgColor: "bg-green-50 dark:bg-green-950",
   },
   {
     label: "Avg Cards/Source",
@@ -44,16 +44,16 @@ const stats = [
         ? Math.round(props.cards.length / props.sources.length)
         : 0,
     icon: TrendingUp,
-    color: "text-purple-600",
-    bgColor: "bg-purple-100",
+    color: "text-purple-600 dark:text-purple-400",
+    bgColor: "bg-purple-50 dark:bg-purple-950",
   },
   {
     label: "Study Progress",
     value: (props: DashboardStatsProps) =>
       `${Math.round((props.cards.length / Math.max(props.sources.length * 10, 1)) * 100)}%`,
     icon: Calendar,
-    color: "text-orange-600",
-    bgColor: "bg-orange-100",
+    color: "text-orange-600 dark:text-orange-400",
+    bgColor: "bg-orange-50 dark:bg-orange-950",
   },
 ];
 
@@ -64,22 +64,22 @@ export default function DashboardStats(props: DashboardStatsProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-card border border-border rounded-lg p-6"
+      className="bg-card border border-border rounded-lg p-6 shadow-md"
     >
-      <h2 className="text-xl font-semibold text-foreground mb-6">Statistics</h2>
+      <h2 className="text-2xl font-bold text-foreground mb-6">Statistics</h2>
 
       {user && (
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-background border border-border rounded-lg p-4 mb-6"
+          className="bg-background border border-border rounded-lg p-4 mb-6 hover:shadow-sm transition-shadow"
         >
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${"bg-gray-100"}`}>
-              <User className={`w-5 h-5 text-gray-600`} />
+            <div className={`p-3 rounded-lg bg-blue-50 dark:bg-blue-950`}>
+              <User className={`w-5 h-5 text-blue-600 dark:text-blue-400`} />
             </div>
             <div>
-              <p className="font-medium text-foreground">{user.name}</p>
+              <p className="font-semibold text-foreground">{user.name}</p>
               <p className="text-sm text-muted-foreground">{user.email}</p>
             </div>
           </div>
@@ -96,10 +96,11 @@ export default function DashboardStats(props: DashboardStatsProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-background border border-border rounded-lg p-4"
+              whileHover={{ scale: 1.02 }}
+              className="bg-background border border-border rounded-lg p-4 hover:shadow-md transition-all duration-200 group"
             >
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                <div className={`p-3 rounded-lg ${stat.bgColor} group-hover:scale-110 transition-transform`}>
                   <Icon className={`w-5 h-5 ${stat.color}`} />
                 </div>
                 <div>

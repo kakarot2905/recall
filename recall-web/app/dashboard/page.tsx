@@ -147,33 +147,33 @@ function DashboardContent() {
     <div className="flex h-screen bg-background">
       <DashboardSidebar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-1 flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b border-border">
+        <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-card to-background">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
             <p className="text-sm text-muted-foreground font-mono">
               {sources.length} sources • {cards.length} cards
             </p>
           </div>
           {user && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <button
                 onClick={loadAll}
-                className="px-4 py-2 border border-border rounded-md bg-background hover:bg-muted text-foreground text-sm font-medium transition-colors"
+                className="px-4 py-2 border border-border rounded-lg bg-background hover:bg-muted text-foreground text-sm font-medium transition-all duration-200 hover:shadow-md"
               >
                 Refresh
               </button>
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-semibold text-sm">
                 {user.name.charAt(0).toUpperCase()}
               </div>
             </div>
           )}
         </div>
-        <div className="flex-1 p-6 overflow-auto">
+        <div className="flex-1 p-8 overflow-auto bg-gradient-to-b from-background to-background/50">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 4 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.3 }}
           >
             {renderContent()}
           </motion.div>

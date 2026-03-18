@@ -48,12 +48,12 @@ export default function DashboardSourcesTable({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-card border border-border rounded-lg p-6"
+      className="bg-card border border-border rounded-lg p-6 shadow-md"
     >
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-foreground">Sources</h2>
-        <span className="text-sm text-muted-foreground">
-          {sources.length} source(s)
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <h2 className="text-2xl font-bold text-foreground">Sources</h2>
+        <span className="text-sm text-muted-foreground font-medium">
+          {sources.length} source{sources.length !== 1 ? 's' : ''}
         </span>
       </div>
 
@@ -69,10 +69,11 @@ export default function DashboardSourcesTable({
               key={source._id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className={`p-4 rounded-lg border cursor-pointer transition-colors ${
+              whileHover={{ scale: 1.01 }}
+              className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 group ${
                 source._id === selectedSourceId
-                  ? "bg-primary/10 border-primary"
-                  : "bg-background border-border hover:bg-muted/50"
+                  ? "bg-primary/10 border-primary shadow-md"
+                  : "bg-background border-border hover:border-primary/50 hover:shadow-sm"
               }`}
               onClick={() => onSelect(source._id)}
             >
@@ -116,13 +117,13 @@ export default function DashboardSourcesTable({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 ml-4">
+                <div className="flex items-center gap-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       // No-op for now
                     }}
-                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors"
+                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
                   >
                     <MoreHorizontal className="w-4 h-4" />
                   </button>
@@ -131,7 +132,7 @@ export default function DashboardSourcesTable({
                       e.stopPropagation();
                       handleDelete(source._id);
                     }}
-                    className="p-2 text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                    className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-all hover:scale-110"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

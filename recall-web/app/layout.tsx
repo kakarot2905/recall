@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Recall Dashboard",
@@ -13,8 +14,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-background text-foreground" style={{ margin: 0 }}>
-        {children}
+      <body className="bg-background text-foreground transition-colors duration-300" style={{ margin: 0 }}>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

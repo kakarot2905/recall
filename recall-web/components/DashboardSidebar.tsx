@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { BookOpen, BarChart3, TrendingUp, Database } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
 
 export type DashboardTab = "sources" | "cards" | "retention" | "stats";
 
@@ -22,8 +23,8 @@ export default function DashboardSidebar({
   onTabChange,
 }: DashboardSidebarProps) {
   return (
-    <div className="w-64 bg-card border-r border-border h-full">
-      <div className="p-6">
+    <div className="w-64 bg-card border-r border-border h-full flex flex-col">
+      <div className="p-6 flex-1">
         <h2 className="text-lg font-semibold text-foreground mb-6">
           Dashboard
         </h2>
@@ -49,6 +50,9 @@ export default function DashboardSidebar({
             );
           })}
         </nav>
+      </div>
+      <div className="p-6 border-t border-border flex items-center justify-center">
+        <ThemeToggle />
       </div>
     </div>
   );

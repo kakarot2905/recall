@@ -209,15 +209,16 @@ export default function DashboardRetentionChart({
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg p-6">
+    <div className="bg-card border border-border rounded-lg p-6 shadow-md">
+      <h2 className="text-2xl font-bold text-foreground mb-6">Retention Curve</h2>
       <div className="mb-6">
         <label className="block text-sm font-medium text-muted-foreground mb-2">
-          Topic
+          Filter by Topic
         </label>
         <select
           value={selectedTopic}
           onChange={(e) => setSelectedTopic(e.target.value)}
-          className="px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary min-w-48"
+          className="px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background transition-all min-w-48"
         >
           <option value="">All Topics</option>
           {topics.map((t) => (
