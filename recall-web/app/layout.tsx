@@ -13,7 +13,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-background text-foreground" style={{ margin: 0 }}>{children}</body>
+      <body className="bg-background text-foreground" style={{ margin: 0 }}>
+        {children}
+      </body>
     </html>
   );
 }
