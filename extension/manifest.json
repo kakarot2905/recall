@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Generate personalized MCQs and flash cards from your notes",
   "permissions": ["storage", "activeTab", "identity"],
-  "host_permissions": ["http://localhost:3000/*", "https://localhost:3000/*"],
+  "host_permissions": ["http://localhost:3001/*"],
   "action": {
     "default_popup": "popup/popup.html",
     "default_title": "Recall - Study Smarter"

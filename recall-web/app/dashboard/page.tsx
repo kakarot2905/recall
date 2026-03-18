@@ -29,7 +29,7 @@ function DashboardContent() {
       router.replace("/dashboard");
     }
     const storedToken =
-      tokenFromUrl || sessionStorage.getItem("recallDashboardToken");
+      tokenFromUrl || sessionStorage.getItem("recallDashboardToken") || "";
     setToken(storedToken);
   }, []);
 
@@ -49,7 +49,7 @@ function DashboardContent() {
       ...((options.headers as Record<string, string>) || {}),
     };
     if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`http://localhost:3000${path}`, {
+    const res = await fetch(path, {
       ...options,
       headers,
     });

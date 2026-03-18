@@ -1,6 +1,32 @@
 let screens, authForm, authEmail, authName, authPassword, authNameField, authEmailError, authNameError, authPasswordError, authFormError, authSubmitBtn, authToggle, googleAuthBtn, userName, userEmail, logoutBtn, addTopicBtn, dashboardBtn, backToHomeBtn, setupForm, topicInput, notesInput, examDateInput, topicError, notesError, dateError, formError, progressStatus, setupStatus, generateBtn, stepRows, quizMeta, quizPrompt, quizOptions, quizAnswerInput, quizFeedback, quizSubmitBtn, quizNextBtn, popupHeader, headerLogoutBtn, quizProgressBar;
 
-const API_BASE_URL = "http://localhost:3000/api";
+// Get dashboard base URL with fallback logic
+async function getDashboardBaseUrl() {
+  // Try production URL first
+  try {
+    const testResponse = await fetch("https://recall-31rx.vercel.app/api/health", {
+      method: "GET",
+      signal: AbortSignal.timeout(3000) // 3 second timeout
+    });
+    if (testResponse.ok) {
+      return "https://recall-31rx.vercel.app";
+    }
+  } catch (error) {
+    console.log("Production dashboard not available, falling back to localhost");
+  }
+
+  // Fallback to localhost
+  return "http://localhost:3001";
+}
+
+// Get the dashboard base URL (cached after first call)
+let dashboardBaseUrlPromise = null;
+async function getDashboardBaseUrlCached() {
+  if (!dashboardBaseUrlPromise) {
+    dashboardBaseUrlPromise = getDashboardBaseUrl();
+  }
+  return dashboardBaseUrlPromise;
+}
 
 const { sm2Calculate, sm2DefaultState } = window.RecallSM2 || {};
 const {
@@ -135,7 +161,8 @@ async function callApi(path, options = {}) {
     });
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const baseUrl = await getApiBaseUrlCached();
+  const response = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers,
   });
@@ -402,7 +429,8 @@ async function navigateToDashboard() {
     return;
   }
 
-  const dashboardUrl = `http://localhost:3000/dashboard?token=${encodeURIComponent(token)}`;
+  const baseUrl = await getDashboardBaseUrlCached();
+  const dashboardUrl = `${baseUrl}/dashboard?token=${encodeURIComponent(token)}`;
   window.open(dashboardUrl, "_blank");
 }
 
@@ -968,7 +996,7 @@ function updateQuizProgressBar() {
 }
 
 // Event listeners - wrapped in DOMContentLoaded to ensure DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   // DOM element declarations with null checks
   screens = {
     auth: document.getElementById("screenAuth"),

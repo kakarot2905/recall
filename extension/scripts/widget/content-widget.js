@@ -169,7 +169,7 @@
             return;
           }
 
-          const response = await fetch("http://localhost:3000/api/progress", {
+          const response = await fetch("http://localhost:3001/api/progress", {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
