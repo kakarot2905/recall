@@ -202,13 +202,15 @@ export default function RetentionChart({ cards, sources, sm2State }: Props) {
       fill: false,
     }));
 
+  
+
   // Custom plugin to draw "Today" vertical line
   const todayLinePlugin = {
     id: "recallTodayLine",
     afterDraw(chart: any) {
       if (todayIndex < 0) return;
       const ctx = chart.ctx;
-      const xPos = chart.scales.x.getPixelForIndex(todayIndex);
+      const xPos = chart.scales.x.getPixelForValue(todayIndex);
       const top = chart.scales.y.top;
       const bottom = chart.scales.y.bottom;
       ctx.save();
@@ -263,7 +265,10 @@ export default function RetentionChart({ cards, sources, sm2State }: Props) {
       </div>
       <div style={{ position: "relative", height: 300 }}>
         <Line
-          data={{ labels, datasets }}
+          data={{
+            labels,
+            datasets
+          }}
           options={{
             responsive: true,
             maintainAspectRatio: false,
