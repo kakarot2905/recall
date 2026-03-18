@@ -90,7 +90,7 @@
 
     async function semanticMatch(question, userAnswer, expectedAnswer) {
         try {
-            const response = await fetch("http://localhost:3000/api/check-answer", {
+            const response = await fetch("https:///api/check-answer", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ question, userAnswer, expectedAnswer }),

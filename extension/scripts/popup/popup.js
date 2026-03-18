@@ -46,6 +46,10 @@ const quizFeedback = document.getElementById("quizFeedback");
 const quizSubmitBtn = document.getElementById("quizSubmitBtn");
 const quizNextBtn = document.getElementById("quizNextBtn");
 
+const popupHeader = document.getElementById('popupHeader');
+const headerLogoutBtn = document.getElementById('headerLogoutBtn');
+const quizProgressBar = document.getElementById('quizProgressBar');
+
 const API_BASE_URL = "http://localhost:3000/api";
 
 const { sm2Calculate, sm2DefaultState } = window.RecallSM2 || {};
@@ -418,6 +422,7 @@ async function handleLogout() {
   ]);
 
   showScreen("auth");
+  updateHeaderVisibility();
 }
 
 function updateUserDisplay() {
@@ -712,6 +717,7 @@ function renderCurrentCard() {
     };
     quizNextBtn.disabled = true;
     quizFeedback.textContent = '';
+    updateQuizProgressBar();
     return;
   }
 
@@ -738,6 +744,8 @@ function renderCurrentCard() {
       quizAnswerInput.value = "";
     }
   }
+
+  updateQuizProgressBar();
 }
 
 async function semanticMatch(question, userAnswer, expectedAnswer) {
@@ -983,12 +991,30 @@ async function initializeApp() {
 
   if (!isAuthenticated) {
     showScreen("auth");
+    updateHeaderVisibility();
     return;
   }
 
+  updateHeaderVisibility();
   pushProgressToServer();
 
   await bootstrapFromStoredCards();
+}
+
+function updateHeaderVisibility() {
+  const isAuthenticated = Boolean(authState.token);
+  if (popupHeader) {
+    popupHeader.style.display = isAuthenticated ? 'flex' : 'none';
+  }
+}
+
+function updateQuizProgressBar() {
+  const totalCards = quizState.cards.length;
+  const currentIndex = quizState.currentIndex;
+  const progress = totalCards > 0 ? ((currentIndex + 1) / totalCards) * 100 : 0;
+  if (quizProgressBar) {
+    quizProgressBar.style.width = `${Math.min(progress, 100)}%`;
+  }
 }
 
 // Event listeners
@@ -997,6 +1023,7 @@ authToggle.addEventListener("click", toggleAuthMode);
 googleAuthBtn.addEventListener("click", handleGoogleAuth);
 
 logoutBtn.addEventListener("click", handleLogout);
+headerLogoutBtn.addEventListener("click", handleLogout);
 addTopicBtn.addEventListener("click", navigateToAddTopic);
 dashboardBtn.addEventListener("click", navigateToDashboard);
 backToHomeBtn.addEventListener("click", () => {

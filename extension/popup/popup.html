@@ -4,454 +4,233 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Recall Popup</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-      :root {
-        --bg: #fbfbfb;
-        --accent-light: #e8f9ff;
-        --blue: #c4d9ff;
-        --purple: #c5baff;
-        --text: #1e1e1e;
-        --muted: #6d7280;
-        --border: #d7dbe3;
-        --inactive: #bfc5d1;
-        --white: #ffffff;
-      }
+html, body {
+  background: #0f1117; color: #f8fafc; 
+  font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif;
+  width: 400px; margin: 0;
+}
 
-      * {
-        box-sizing: border-box;
-      }
+.popup {
+  width: 400px; max-height: 600px; overflow-y: auto; padding: 0;
+}
 
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-        width: 400px;
-        background: var(--bg);
-        color: var(--text);
-        font-family: "Segoe UI", "SF Pro Text", "Helvetica Neue", sans-serif;
-      }
+.popup-header {
+  display: flex; justify-content: space-between; align-items: center; 
+  padding: 12px 16px;
+  border-bottom: 1px solid #252c3a; background: #181c24;
+}
 
-      body {
-        min-height: 100vh;
-      }
+.screen {
+  display: none;
+}
 
-      .popup {
-        width: 400px;
-        max-height: 600px;
-        overflow-y: auto;
-        padding: 20px;
-      }
+.screen.active {
+  display: block;
+}
 
-      .screen {
-        display: none;
-        opacity: 0;
-        transition: opacity 220ms ease;
-      }
+#screenAuth, #screenSetup, #screenProgress, #screenQuiz {
+  padding: 20px 16px;
+}
 
-      .screen.active {
-        display: block;
-        opacity: 1;
-      }
+#screenHome {
+  padding: 12px 16px;
+}
 
-      h1,
-      h2,
-      p {
-        margin: 0;
-      }
+.field input, .field textarea {
+  background: #1e2330; border: 1px solid #252c3a; border-radius: 8px;
+  color: #f8fafc; padding: 8px 12px; font-size: 14px; font-family: inherit;
+  outline: none; width: 100%; box-sizing: border-box;
+  transition: border-color 150ms, box-shadow 150ms;
+}
 
-      h1 {
-        font-size: 28px;
-        font-weight: 800;
-        letter-spacing: 0.5px;
-        margin-bottom: 18px;
-      }
+.field input:focus, .field textarea:focus {
+  border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
 
-      h2 {
-        font-size: 20px;
-        font-weight: 700;
-        margin-bottom: 8px;
-      }
+.field label {
+  font-size: 11px; font-family: monospace; text-transform: uppercase;
+  letter-spacing: 0.08em; color: #6b7a99; margin-bottom: 6px; display: block;
+}
 
-      .subtext {
-        color: var(--muted);
-        font-size: 14px;
-        line-height: 1.4;
-        margin-bottom: 16px;
-      }
+.btn {
+  background: #3b82f6; color: #f8fafc; border-radius: 8px; 
+  padding: 10px 14px; font-size: 14px; font-weight: 500;
+  border: none; cursor: pointer; width: 100%;
+  transition: filter 120ms;
+}
 
-      .form {
-        display: grid;
-        gap: 12px;
-      }
+.btn:hover {
+  filter: brightness(1.1);
+}
 
-      .field {
-        display: grid;
-        gap: 6px;
-      }
+.btn:disabled {
+  opacity: 0.4; cursor: not-allowed;
+}
 
-      .field label {
-        font-size: 13px;
-        color: #3b4151;
-        font-weight: 600;
-      }
+.btn-start {
+  background: #1e2330; border: 1px solid #252c3a; color: #f8fafc;
+}
 
-      .field input,
-      .field textarea {
-        width: 100%;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: var(--white);
-        color: var(--text);
-        padding: 10px 12px;
-        font-size: 14px;
-        outline: none;
-        transition:
-          border-color 150ms ease,
-          box-shadow 150ms ease;
-      }
+.google-btn {
+  background: #181c24; border: 1px solid #252c3a; color: #f8fafc;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
 
-      .field textarea {
-        resize: vertical;
-        min-height: 110px;
-        max-height: 220px;
-        line-height: 1.45;
-      }
+.google-btn:hover {
+  background: #1e2330;
+}
 
-      .field input:focus,
-      .field textarea:focus {
-        border-color: var(--blue);
-        box-shadow: 0 0 0 2px rgba(196, 217, 255, 0.3);
-      }
+.link-btn {
+  background: none; border: none; color: #3b82f6; font-size: 13px;
+  cursor: pointer; padding: 0; text-align: center; width: 100%;
+}
 
-      .field .error {
-        font-size: 12px;
-        color: #8e3361;
-        min-height: 16px;
-      }
+.divider {
+  display: flex; align-items: center; gap: 12px; margin: 12px 0;
+  color: #6b7a99; font-size: 12px;
+}
 
-      .btn {
-        width: 100%;
-        border: 0;
-        border-radius: 12px;
-        padding: 12px 14px;
-        font-size: 14px;
-        font-weight: 700;
-        color: #1f1f1f;
-        cursor: pointer;
-        transition:
-          transform 120ms ease,
-          filter 120ms ease;
-      }
+.divider::before, .divider::after {
+  content: ""; flex: 1; height: 1px; background: #252c3a;
+}
 
-      .btn:active {
-        transform: translateY(1px);
-      }
+.home-header {
+  display: none;
+}
 
-      .btn-generate {
-        background: var(--purple);
-        margin-top: 2px;
-      }
+.nav-btn {
+  width: 100%; display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px; border-radius: 10px; border: 1px solid #252c3a;
+  background: #181c24; cursor: pointer; text-align: left;
+  transition: background 150ms, border-color 150ms;
+}
 
-      .btn-generate:hover,
-      .btn-start:hover {
-        filter: brightness(0.97);
-      }
+.nav-btn:hover {
+  background: #1e2330; border-color: rgba(59,130,246,0.4);
+}
 
-      .progress-card {
-        background: var(--accent-light);
-        border: 1px solid #dceef6;
-        border-radius: 16px;
-        padding: 16px;
-      }
+.nav-btn-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: grid; place-items: center; font-size: 18px; flex-shrink: 0;
+}
 
-      .steps {
-        margin-top: 8px;
-        display: grid;
-        gap: 10px;
-      }
+.nav-btn-primary .nav-btn-icon {
+  background: rgba(59,130,246,0.15);
+}
 
-      .step {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 14px;
-        color: #2d3545;
-        opacity: 0.7;
-        transition: opacity 200ms ease;
-      }
+.nav-btn-secondary .nav-btn-icon {
+  background: rgba(59,130,246,0.1);
+}
 
-      .step.is-on {
-        opacity: 1;
-      }
+.progress-card {
+  background: #181c24; border: 1px solid #252c3a; border-radius: 12px;
+  padding: 16px; margin: 16px;
+}
 
-      .status-icon {
-        width: 20px;
-        height: 20px;
-        border-radius: 999px;
-        flex: 0 0 20px;
-        border: 1px solid #d6d9e0;
-        background: var(--inactive);
-        color: transparent;
-        display: grid;
-        place-items: center;
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 1;
-        transition:
-          background 160ms ease,
-          color 160ms ease,
-          border-color 160ms ease;
-      }
+.step {
+  display: flex; align-items: center; gap: 10px; font-size: 13px; color: #6b7a99;
+  opacity: 0.6; transition: opacity 200ms;
+}
 
-      .step.is-on .status-icon,
-      .step.is-done .status-icon {
-        background: var(--purple);
-        border-color: var(--purple);
-        color: #2a204a;
-      }
+.step.is-on, .step.is-done {
+  opacity: 1; color: #f8fafc;
+}
 
-      .placeholder-card {
-        min-height: 170px;
-        border-radius: 14px;
-        border: 1px solid var(--blue);
-        background: var(--accent-light);
-        margin: 8px 0 16px;
-      }
+.status-icon {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #252c3a; border: 1px solid #252c3a; 
+  color: transparent; display: grid; place-items: center; font-size: 11px;
+  flex-shrink: 0; transition: all 160ms;
+}
 
-      .quiz-card {
-        min-height: 170px;
-        border-radius: 14px;
-        border: 1px solid var(--blue);
-        background: var(--accent-light);
-        margin: 8px 0 12px;
-        padding: 12px;
-      }
+.step.is-on .status-icon, .step.is-done .status-icon {
+  background: #3b82f6; border-color: #3b82f6; color: #f8fafc;
+}
 
-      .quiz-prompt {
-        font-size: 14px;
-        font-weight: 600;
-        color: #222b3d;
-        line-height: 1.4;
-        margin-bottom: 10px;
-      }
+.quiz-card {
+  background: #181c24; border: 1px solid #252c3a; border-radius: 12px;
+  padding: 14px; margin: 8px 0 12px;
+}
 
-      .quiz-options {
-        display: grid;
-        gap: 8px;
-      }
+.quiz-option {
+  width: 100%; text-align: left; padding: 9px 12px;
+  border: 1px solid #252c3a; border-radius: 8px;
+  background: #1e2330; color: #f8fafc; font-size: 13px; cursor: pointer;
+  transition: all 150ms; font-family: inherit;
+}
 
-      .quiz-option {
-        border: 1px solid var(--border);
-        background: var(--white);
-        border-radius: 10px;
-        padding: 9px 10px;
-        text-align: left;
-        cursor: pointer;
-        font-size: 13px;
-      }
+.quiz-option:hover:not(:disabled) {
+  border-color: #3b82f6; background: rgba(59,130,246,0.08);
+}
 
-      .quiz-option.is-selected {
-        border-color: #809aff;
-        background: #eef2ff;
-      }
+.quiz-option.is-selected {
+  border-color: #3b82f6; background: rgba(59,130,246,0.12); color: #f8fafc;
+}
 
-      .quiz-answer {
-        width: 100%;
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        background: var(--white);
-        color: var(--text);
-        padding: 10px;
-        font-size: 13px;
-      }
+.quiz-progress-bar-track {
+  height: 3px; background: #252c3a; border-radius: 2px;
+}
 
-      .quiz-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-      }
+.quiz-progress-bar-fill {
+  height: 3px; background: #3b82f6; border-radius: 2px;
+  transition: width 300ms ease;
+}
 
-      .btn-secondary {
-        background: #dbe3ff;
-      }
+.quiz-answer {
+  background: #1e2330; border: 1px solid #252c3a; border-radius: 8px;
+  color: #f8fafc; padding: 8px 12px; font-size: 14px; font-family: inherit;
+  outline: none; width: 100%; box-sizing: border-box;
+  transition: border-color 150ms, box-shadow 150ms;
+}
 
-      .btn-start {
-        background: var(--blue);
-      }
+.quiz-answer:focus {
+  border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
 
-      .link-btn {
-        background: none;
-        border: none;
-        color: #6374d6;
-        cursor: pointer;
-        text-decoration: underline;
-        font-size: 13px;
-        padding: 0;
-        margin-top: 8px;
-      }
+.error {
+  font-size: 12px; color: #f87171; min-height: 16px; margin-top: 4px;
+}
 
-      .google-btn {
-        background: var(--white);
-        border: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        margin-top: 8px;
-      }
+.back-btn {
+  background: none; border: none; color: #6b7a99; font-size: 13px;
+  cursor: pointer; padding: 8px 0; text-align: center; width: 100%;
+  transition: color 150ms;
+}
 
-      .divider {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin: 12px 0;
-        color: var(--muted);
-        font-size: 12px;
-      }
-
-      .divider::before,
-      .divider::after {
-        content: "";
-        flex: 1;
-        height: 1px;
-        background: var(--border);
-      }
-
-      /* Home Screen Styles */
-      .home-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 24px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid var(--border);
-      }
-
-      .home-header h1 {
-        font-size: 24px;
-        margin: 0;
-      }
-
-      .user-info {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 4px;
-      }
-
-      .user-name {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--text);
-      }
-
-      .user-email {
-        font-size: 11px;
-        color: var(--muted);
-      }
-
-      .logout-btn {
-        background: none;
-        border: none;
-        color: #8e3361;
-        cursor: pointer;
-        font-size: 11px;
-        text-decoration: underline;
-        padding: 0;
-        margin-top: 2px;
-      }
-
-      .nav-buttons {
-        display: grid;
-        gap: 12px;
-        margin-top: 12px;
-      }
-
-      .nav-btn {
-        width: 100%;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        padding: 16px;
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--text);
-        background: var(--white);
-        cursor: pointer;
-        text-align: left;
-        transition: all 150ms ease;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .nav-btn:hover {
-        border-color: var(--blue);
-        background: #f8faff;
-      }
-
-      .nav-btn-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        display: grid;
-        place-items: center;
-        font-size: 18px;
-        flex-shrink: 0;
-      }
-
-      .nav-btn-primary .nav-btn-icon {
-        background: var(--purple);
-      }
-
-      .nav-btn-secondary .nav-btn-icon {
-        background: var(--blue);
-      }
-
-      .nav-btn-content {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-
-      .nav-btn-title {
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--text);
-      }
-
-      .nav-btn-desc {
-        font-size: 12px;
-        color: var(--muted);
-      }
-
-      .back-btn {
-        background: none;
-        border: none;
-        color: var(--muted);
-        cursor: pointer;
-        font-size: 13px;
-        padding: 8px 0;
-        margin-top: 4px;
-        text-align: center;
-        transition: color 150ms ease;
-      }
-
-      .back-btn:hover {
-        color: var(--text);
-      }
+.back-btn:hover {
+  color: #f8fafc;
+}
     </style>
   </head>
   <body>
     <main class="popup" id="popupRoot">
+      <div class="popup-header" id="popupHeader">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:24px;height:24px;border-radius:6px;background:rgba(59,130,246,0.2);
+                      display:grid;place-items:center">
+            <span style="color:#3b82f6;font-size:12px;font-weight:700">R</span>
+          </div>
+          <span style="font-size:13px;font-weight:600;letter-spacing:-0.03em">RECALL</span>
+        </div>
+        <button class="btn" id="headerLogoutBtn" type="button"
+          style="width:auto;padding:4px 8px;font-size:10px;font-family:monospace;
+                 text-transform:uppercase;letter-spacing:0.08em;background:transparent;
+                 border:none;color:#6b7a99;display:none">
+          Logout
+        </button>
+      </div>
       <section
         class="screen active"
         id="screenAuth"
         aria-label="Authentication"
       >
-        <h1>RECALL</h1>
-        <p class="subtext">Sign in to continue</p>
+        <div style="padding-top: 4px;">
+          <p class="subtext">Sign in to continue</p>
 
-        <form class="form" id="authForm" novalidate>
+          <form class="form" id="authForm" novalidate>
           <div class="field">
             <label for="authEmail">Email</label>
             <input id="authEmail" name="email" type="email" required />
@@ -506,18 +285,8 @@
       </section>
 
       <section class="screen" id="screenHome" aria-label="Home">
-        <div class="home-header">
-          <h1>RECALL</h1>
-          <div class="user-info">
-            <div class="user-name" id="userName">User</div>
-            <div class="user-email" id="userEmail">user@email.com</div>
-            <button class="logout-btn" id="logoutBtn" type="button">
-              Logout
-            </button>
-          </div>
-        </div>
-
-        <div class="nav-buttons">
+        <div class="screen-body" style="padding: 0 16px 16px;">
+          <div class="nav-buttons">
           <button
             class="nav-btn nav-btn-primary"
             id="addTopicBtn"
@@ -547,7 +316,6 @@
       </section>
 
       <section class="screen" id="screenSetup" aria-label="Setup Form">
-        <h1>RECALL</h1>
         <p class="subtext" id="setupStatus"></p>
         <form class="form" id="setupForm" novalidate>
           <div class="field">
@@ -611,7 +379,12 @@
         <h2>Quick Calibration</h2>
         <p class="subtext">Answer a few cards to personalise your schedule</p>
         <div class="quiz-card" id="quizCard">
-          <p class="subtext" id="quizMeta">Card 1</p>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <span class="subtext" id="quizMeta" style="margin:0;white-space:nowrap">Card 1</span>
+            <div class="quiz-progress-bar-track" style="flex:1">
+              <div class="quiz-progress-bar-fill" id="quizProgressBar" style="width:0%"></div>
+            </div>
+          </div>
           <p class="quiz-prompt" id="quizPrompt">Loading cards...</p>
           <div class="quiz-options" id="quizOptions"></div>
           <input

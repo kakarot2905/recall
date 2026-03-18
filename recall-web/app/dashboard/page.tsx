@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import RetentionChart from "@/components/RetentionChart";
-import SourcesTable from "@/components/SourcesTable";
-import CardsPanel from "@/components/CardsPanel";
-import BackendSnapshot from "@/components/BackendSnapshot";
+import { motion } from "framer-motion";
+import DashboardSidebar, { DashboardTab } from "@/components/DashboardSidebar";
+import DashboardSourcesTable from "@/components/DashboardSourcesTable";
+import DashboardCardsPanel from "@/components/DashboardCardsPanel";
+import DashboardRetentionChart from "@/components/DashboardRetentionChart";
+import DashboardStats from "@/components/DashboardStats";
 
 function DashboardContent() {
   const searchParams = useSearchParams();
@@ -18,6 +20,7 @@ function DashboardContent() {
   const [selectedSourceId, setSelectedSourceId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState<DashboardTab>("sources");
 
   useEffect(() => {
     const tokenFromUrl = searchParams.get("token");
@@ -77,107 +80,100 @@ function DashboardContent() {
 
   if (loading)
     return (
-      <div style={{ padding: 40, fontFamily: "Segoe UI, sans-serif" }}>
-        Loading...
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
 
   if (error)
     return (
-      <div
-        style={{
-          padding: 40,
-          fontFamily: "Segoe UI, sans-serif",
-          color: "#b42318",
-        }}
-      >
-        {error}
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-destructive text-center">
+          <p className="text-lg font-semibold mb-2">Error</p>
+          <p>{error}</p>
+        </div>
       </div>
     );
 
-  return (
-    <div
-      style={{
-        maxWidth: 1280,
-        margin: "0 auto",
-        padding: 24,
-        fontFamily: "Segoe UI, sans-serif",
-      }}
-    >
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 24,
-          paddingBottom: 16,
-          borderBottom: "1px solid #d8deea",
-        }}
-      >
-        <div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800 }}>
-            Recall Dashboard
-          </h1>
-          <p style={{ margin: "4px 0 0", color: "#5e6678", fontSize: 14 }}>
-            {user ? `Logged in as ${user.name} (${user.email})` : ""}
-          </p>
-        </div>
-        <button
-          onClick={loadAll}
-          style={{
-            border: "1px solid #d8deea",
-            background: "#fff",
-            borderRadius: 10,
-            padding: "8px 16px",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          Refresh
-        </button>
-      </header>
+  const renderContent = () => {
+    switch (activeTab) {
+      case "sources":
+        return (
+          <DashboardSourcesTable
+            sources={sources}
+            selectedSourceId={selectedSourceId}
+            onSelect={(id) => {
+              setSelectedSourceId(id);
+              setActiveTab("cards");
+            }}
+            onDelete={async (id) => {
+              await api(`/api/sources/${id}`, { method: "DELETE" });
+              loadAll();
+            }}
+          />
+        );
+      case "cards":
+        return (
+          <DashboardCardsPanel
+            cards={cards}
+            sources={sources}
+            selectedSourceId={selectedSourceId}
+            onSelectSource={setSelectedSourceId}
+            onDelete={async (id) => {
+              await api(`/api/cards/${id}`, { method: "DELETE" });
+              loadAll();
+            }}
+          />
+        );
+      case "retention":
+        return (
+          <DashboardRetentionChart
+            cards={cards}
+            sources={sources}
+            sm2State={sm2State}
+          />
+        );
+      case "stats":
+        return <DashboardStats sources={sources} cards={cards} user={user} />;
+      default:
+        return null;
+    }
+  };
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <SourcesTable
-          sources={sources}
-          selectedSourceId={selectedSourceId}
-          onSelect={setSelectedSourceId}
-          onRefresh={loadAll}
-          api={api}
-        />
-        <CardsPanel
-          cards={cards}
-          sources={sources}
-          selectedSourceId={selectedSourceId}
-          onRefresh={loadAll}
-          api={api}
-        />
-        <div
-          style={{
-            gridColumn: "1 / -1",
-            background: "#fff",
-            border: "1px solid #d8deea",
-            borderRadius: 14,
-            padding: 16,
-          }}
-        >
-          <h2 style={{ margin: "0 0 16px" }}>Backend Data Snapshot</h2>
-          <BackendSnapshot sources={sources} cards={cards} user={user} />
+  return (
+    <div className="flex h-screen bg-background">
+      <DashboardSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <div className="flex-1 flex flex-col">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+            <p className="text-sm text-muted-foreground font-mono">
+              {sources.length} sources • {cards.length} cards
+            </p>
+          </div>
+          {user && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={loadAll}
+                className="px-4 py-2 border border-border rounded-md bg-background hover:bg-muted text-foreground text-sm font-medium transition-colors"
+              >
+                Refresh
+              </button>
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+            </div>
+          )}
         </div>
-        <div
-          style={{
-            gridColumn: "1 / -1",
-            background: "#fff",
-            border: "1px solid #d8deea",
-            borderRadius: 14,
-            padding: 16,
-          }}
-        >
-          <h2 style={{ margin: "0 0 4px" }}>Retention Graph</h2>
-          <p style={{ margin: "0 0 16px", color: "#5e6678", fontSize: 13 }}>
-            Ebbinghaus forgetting curves per topic — past 7 days to exam
-          </p>
-          <RetentionChart cards={cards} sources={sources} sm2State={sm2State} />
+        <div className="flex-1 p-6 overflow-auto">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderContent()}
+          </motion.div>
         </div>
       </div>
     </div>

@@ -1007,10 +1007,10 @@
     wrapper.style.maxWidth = "calc(100vw - 32px)";
     wrapper.style.padding = "12px";
     wrapper.style.borderRadius = "12px";
-    wrapper.style.border = "1px solid rgba(80, 89, 117, 0.25)";
-    wrapper.style.background = "#ffffff";
-    wrapper.style.color = "#1d2433";
-    wrapper.style.boxShadow = "0 8px 30px rgba(18, 28, 45, 0.18)";
+    wrapper.style.border = "1px solid #252c3a";
+    wrapper.style.background = "#181c24";
+    wrapper.style.color = "#f8fafc";
+    wrapper.style.boxShadow = "0 8px 30px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)";
     wrapper.style.zIndex = "2147483647";
     wrapper.style.fontFamily = "Segoe UI, Helvetica Neue, Arial, sans-serif";
     wrapper.style.display = "none";
@@ -1036,7 +1036,7 @@
     title.style.fontWeight = "700";
     title.style.letterSpacing = "0.4px";
     title.style.textTransform = "uppercase";
-    title.style.color = "#4a5575";
+    title.style.color = "#6b7a99";
 
     const typeBadge = document.createElement("span");
     typeBadge.id = `${WIDGET_ID}-type-badge`;
@@ -1044,9 +1044,9 @@
     typeBadge.style.fontWeight = "600";
     typeBadge.style.padding = "2px 6px";
     typeBadge.style.borderRadius = "999px";
-    typeBadge.style.background = "#eef1ff";
-    typeBadge.style.color = "#5a6aaa";
-    typeBadge.style.border = "1px solid #cfd6ea";
+    typeBadge.style.background = "#1e2330";
+    typeBadge.style.color = "#6b7a99";
+    typeBadge.style.border = "1px solid #252c3a";
     typeBadge.style.textTransform = "uppercase";
     typeBadge.style.letterSpacing = "0.3px";
 
@@ -1058,7 +1058,7 @@
     closeBtn.style.fontSize = "16px";
     closeBtn.style.border = "none";
     closeBtn.style.background = "transparent";
-    closeBtn.style.color = "#999";
+    closeBtn.style.color = "#6b7a99";
     closeBtn.style.cursor = "pointer";
     closeBtn.style.padding = "0";
     closeBtn.style.width = "20px";
@@ -1069,7 +1069,7 @@
     closeBtn.style.transition = "color 0.2s";
     closeBtn.style.flexShrink = "0";
     closeBtn.onmouseover = () => (closeBtn.style.color = "#555");
-    closeBtn.onmouseout = () => (closeBtn.style.color = "#999");
+    closeBtn.onmouseout = () => (closeBtn.style.color = "#6b7a99");
     closeBtn.onclick = (e) => {
       e.stopPropagation();
       isDndPreview = false;
@@ -1191,7 +1191,7 @@
     const footer = document.createElement("div");
     footer.style.marginTop = "8px";
     footer.style.fontSize = "11px";
-    footer.style.color = "#66708a";
+    footer.style.color = "#6b7a99";
     footer.style.display = "flex";
     footer.style.alignItems = "center";
     footer.style.justifyContent = "space-between";
