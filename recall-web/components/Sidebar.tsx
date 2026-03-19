@@ -110,7 +110,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={`fixed left-0 top-16 h-[calc(100vh-64px)] bg-card border-r border-border z-50 overflow-y-auto transition-all duration-300 shadow-sm ${
-          expanded ? "w-56" : "w-20"
+          expanded ? "w-[200px]" : "w-[80px]"
         }`}
       >
         {/* Header */}

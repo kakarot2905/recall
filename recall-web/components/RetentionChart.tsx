@@ -229,29 +229,14 @@ export default function RetentionChart({ cards, sources, sm2State }: Props) {
 
   return (
     <div>
-      <div style={{ marginBottom: 14 }}>
-        <label
-          style={{
-            fontSize: 12,
-            color: "#5e6678",
-            display: "block",
-            marginBottom: 4,
-          }}
-        >
+      <div className="mb-4">
+        <label className="text-[11px] font-mono uppercase tracking-widest-custom text-muted-foreground mb-1 block">
           Topic
         </label>
         <select
           value={selectedTopic}
           onChange={(e) => setSelectedTopic(e.target.value)}
-          style={{
-            border: "1px solid #d8deea",
-            borderRadius: 8,
-            padding: "6px 8px",
-            fontSize: 13,
-            fontFamily: "inherit",
-            background: "#fff",
-            minWidth: 180,
-          }}
+          className="min-w-[180px] w-full max-w-[240px] border border-border rounded-lg px-2 py-1.5 text-xs bg-muted text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
         >
           <option value="">All Topics</option>
           {topics.map((t) => (
@@ -287,13 +272,13 @@ export default function RetentionChart({ cards, sources, sm2State }: Props) {
             scales: {
               x: {
                 ticks: { font: { size: 10 }, maxRotation: 45 },
-                grid: { color: "rgba(0,0,0,0.04)" },
+                grid: { color: "rgba(255,255,255,0.04)" },
               },
               y: {
                 min: 0,
                 max: 100,
                 ticks: { font: { size: 10 }, callback: (v: any) => v + "%" },
-                grid: { color: "rgba(0,0,0,0.06)" },
+                grid: { color: "rgba(255,255,255,0.04)" },
               },
             },
           }}

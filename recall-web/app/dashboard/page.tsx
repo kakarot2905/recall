@@ -129,11 +129,13 @@ function DashboardContent() {
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
         <main
-          className={`flex-1 p-6 bg-background transition-all duration-300 ${sidebarOpen ? "pl-56" : "pl-20"}`}
+          className={`flex-1 transition-all duration-300 ${
+            sidebarOpen ? "pl-[200px]" : "pl-[80px]"
+          }`}
         >
-          <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
+          <div className="max-w-[1280px] mx-auto px-6 py-6 space-y-8">
             {/* Page Header */}
-            <div className="animate-slide-up">
+            <div className="animate-slide-up" style={{ animationDelay: "0s" }}>
               <h2 className="text-3xl font-bold text-foreground mb-2">
                 Dashboard
               </h2>
@@ -165,11 +167,11 @@ function DashboardContent() {
             </div>
 
             {/* Charts Section */}
-            <div
-              className="space-y-6 animate-slide-up"
-              style={{ animationDelay: "0.2s" }}
-            >
-              <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
+            <div className="space-y-6">
+              <div
+                className="bg-card border border-border rounded-lg p-6 shadow-sm animate-slide-up"
+                style={{ animationDelay: "0.2s" }}
+              >
                 <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center gap-2">
                   <svg
                     className="w-5 h-5 text-primary"
@@ -196,7 +198,10 @@ function DashboardContent() {
                 />
               </div>
 
-              <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
+              <div
+                className="bg-card border border-border rounded-lg p-6 shadow-sm animate-slide-up"
+                style={{ animationDelay: "0.4s" }}
+              >
                 <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center gap-2">
                   <svg
                     className="w-5 h-5 text-primary"
