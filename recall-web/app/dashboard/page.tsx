@@ -131,7 +131,7 @@ function DashboardContent() {
 
         <main
           className={`flex-1 transition-all duration-300 ${
-            sidebarOpen ? "pl-[200px]" : "pl-[80px]"
+            sidebarOpen ? "pl-[200px]" : "pl-[56px]"
           }`}
         >
           <div className="max-w-[1280px] mx-auto px-6 py-6 space-y-8">

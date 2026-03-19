@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 
 interface SidebarProps {
@@ -17,6 +17,10 @@ interface NavItem {
 
 export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const [expanded, setExpanded] = useState(isOpen);
+
+  useEffect(() => {
+    setExpanded(isOpen);
+  }, [isOpen]);
 
   const navItems: NavItem[] = [
     {
