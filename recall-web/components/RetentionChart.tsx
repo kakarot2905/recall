@@ -202,8 +202,6 @@ export default function RetentionChart({ cards, sources, sm2State }: Props) {
       fill: false,
     }));
 
-  
-
   // Custom plugin to draw "Today" vertical line
   const todayLinePlugin = {
     id: "recallTodayLine",
@@ -267,7 +265,7 @@ export default function RetentionChart({ cards, sources, sm2State }: Props) {
         <Line
           data={{
             labels,
-            datasets
+            datasets,
           }}
           options={{
             responsive: true,

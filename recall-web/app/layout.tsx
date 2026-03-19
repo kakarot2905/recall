@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ThemeProvider } from "next-themes";
 
 export const metadata: Metadata = {
   title: "Recall Dashboard",
@@ -12,9 +13,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body style={{ margin: 0, background: "#ffffff" }}>
-        {children}
+    <html lang="en" className="h-full" suppressHydrationWarning>
+      <body className="h-full bg-background text-foreground antialiased">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
