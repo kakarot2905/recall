@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface Props {
   cards: any[];
@@ -34,113 +37,78 @@ export default function CardsPanel({
   }
 
   return (
-    <div
-      style={{
-        background: "#fff",
-        border: "1px solid #d8deea",
-        borderRadius: 14,
-        padding: 16,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 12,
-        }}
-      >
-        <h2 style={{ margin: 0 }}>Cards</h2>
-        <span style={{ color: "#5e6678", fontSize: 13 }}>
-          {selectedSourceId
-            ? `${selectedCards.length} card(s)`
-            : "Pick a source"}
-        </span>
-      </div>
-
-      {error && <p style={{ color: "#b42318", fontSize: 12 }}>{error}</p>}
-
-      {!selectedSourceId && (
-        <p style={{ color: "#5e6678", fontSize: 13 }}>
-          Select a source from the left panel.
-        </p>
-      )}
-
-      <div
-        style={{ display: "grid", gap: 10, maxHeight: 500, overflowY: "auto" }}
-      >
-        {selectedCards.map((card) => (
-          <div
-            key={card._id}
-            style={{
-              border: "1px solid #d8deea",
-              borderRadius: 10,
-              padding: 10,
-              background: "#fcfdff",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 6,
-              }}
-            >
-              <div style={{ display: "flex", gap: 6 }}>
-                <span
-                  style={{
-                    border: "1px solid #cfd6ea",
-                    borderRadius: 999,
-                    padding: "2px 8px",
-                    fontSize: 11,
-                    color: "#3f4860",
-                  }}
-                >
-                  {card.type}
-                </span>
-                <span
-                  style={{
-                    border: "1px solid #cfd6ea",
-                    borderRadius: 999,
-                    padding: "2px 8px",
-                    fontSize: 11,
-                    color: "#3f4860",
-                  }}
-                >
-                  Difficulty {card.difficulty}
-                </span>
-              </div>
-              <button
-                onClick={() => handleDelete(card._id)}
-                style={{
-                  border: "1px solid #f1b7b5",
-                  color: "#8f1f1b",
-                  background: "#fff5f4",
-                  borderRadius: 8,
-                  padding: "2px 8px",
-                  fontSize: 11,
-                  cursor: "pointer",
-                }}
-              >
-                Delete
-              </button>
-            </div>
-            <p style={{ margin: "0 0 4px", fontWeight: 600, fontSize: 13 }}>
-              {card.question || card.content || "—"}
-            </p>
-            {Array.isArray(card.options) && card.options.length > 0 && (
-              <p style={{ margin: "0 0 2px", color: "#5e6678", fontSize: 12 }}>
-                Options: {card.options.join(" | ")}
-              </p>
-            )}
-            {(card.correct || card.answer) && (
-              <p style={{ margin: "0 0 2px", color: "#5e6678", fontSize: 12 }}>
-                Answer: {card.correct || card.answer}
-              </p>
-            )}
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              📚 Cards
+            </CardTitle>
+            <CardDescription>
+              {selectedSourceId
+                ? `${selectedCards.length} card(s) from selected source`
+                : "Select a source to view cards"}
+            </CardDescription>
           </div>
-        ))}
-      </div>
-    </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {error && (
+          <p className="text-sm text-destructive mb-4">{error}</p>
+        )}
+
+        {!selectedSourceId ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <div className="text-4xl mb-4 opacity-50">📚</div>
+            <p>Select a source from the left panel to view its cards.</p>
+          </div>
+        ) : selectedCards.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <p>No cards in this source yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {selectedCards.map((card) => (
+              <div
+                key={card._id}
+                className="border border-border rounded-lg p-4 bg-muted hover:bg-accent transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      {card.type}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {`Level ${card.difficulty || 1}`}
+                    </Badge>
+                  </div>
+                  <button
+                    onClick={() => handleDelete(card._id)}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 px-2 py-1 rounded text-sm"
+                  >
+                    🗑️
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <p className="font-semibold text-sm">
+                    {card.question || card.content || "—"}
+                  </p>
+                  {Array.isArray(card.options) && card.options.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-semibold">Options:</span> {card.options.join(" | ")}
+                    </p>
+                  )}
+                  {(card.correct || card.answer) && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-semibold">Answer:</span> {card.correct || card.answer}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

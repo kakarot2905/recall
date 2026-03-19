@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Navbar from "@/components/Navbar";
+import Sidebar from "@/components/Sidebar";
 import RetentionChart from "@/components/RetentionChart";
 import SourcesTable from "@/components/SourcesTable";
 import CardsPanel from "@/components/CardsPanel";
@@ -16,8 +18,9 @@ function DashboardContent() {
   const [cards, setCards] = useState<any[]>([]);
   const [sm2State, setSm2State] = useState<Record<string, any>>({});
   const [selectedSourceId, setSelectedSourceId] = useState<string>("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     const tokenFromUrl = searchParams.get("token");
@@ -54,7 +57,7 @@ function DashboardContent() {
 
   async function loadAll() {
     try {
-      setLoading(true);
+      // setLoading(true);
       const [dashboardData, progressData] = await Promise.all([
         api("/api/dashboard-data"),
         api("/api/progress"),
@@ -69,7 +72,7 @@ function DashboardContent() {
         setSelectedSourceId(dashboardData.sources[0]._id);
       }
     } catch (err: any) {
-      setError(err.message || "Failed to load dashboard");
+      // setError(err.message || "Failed to load dashboard");
     } finally {
       setLoading(false);
     }
@@ -77,7 +80,7 @@ function DashboardContent() {
 
   if (loading)
     return (
-      <div style={{ padding: 40, fontFamily: "Segoe UI, sans-serif" }}>
+      <div style={{ padding: 40, fontFamily: "system-ui, sans-serif", color: "#64748b" }}>
         Loading...
       </div>
     );
@@ -87,8 +90,8 @@ function DashboardContent() {
       <div
         style={{
           padding: 40,
-          fontFamily: "Segoe UI, sans-serif",
-          color: "#b42318",
+          fontFamily: "system-ui, sans-serif",
+          color: "#dc2626",
         }}
       >
         {error}
@@ -96,97 +99,62 @@ function DashboardContent() {
     );
 
   return (
-    <div
-      style={{
-        maxWidth: 1280,
-        margin: "0 auto",
-        padding: 24,
-        fontFamily: "Segoe UI, sans-serif",
-      }}
-    >
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 24,
-          paddingBottom: 16,
-          borderBottom: "1px solid #d8deea",
-        }}
-      >
-        <div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800 }}>
-            Recall Dashboard
-          </h1>
-          <p style={{ margin: "4px 0 0", color: "#5e6678", fontSize: 14 }}>
-            {user ? `Logged in as ${user.name} (${user.email})` : ""}
-          </p>
-        </div>
-        <button
-          onClick={loadAll}
-          style={{
-            border: "1px solid #d8deea",
-            background: "#fff",
-            borderRadius: 10,
-            padding: "8px 16px",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          Refresh
-        </button>
-      </header>
+    <>
+      <Navbar user={user} onRefresh={loadAll} onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      <div className="flex min-h-screen pt-16">
+        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        
+        <main className={`flex-1 p-6 bg-white transition-all duration-300 ${sidebarOpen ? "pl-56" : "pl-20"}`}>
+          <div className="max-w-6xl mx-auto space-y-8">
+            {/* Page Header */}
+            <div>
+              <h2 className="text-3xl font-bold text-slate-900 mb-2">Dashboard</h2>
+              <p className="text-slate-600">Track your spaced repetition progress and manage learning sources</p>
+            </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <SourcesTable
-          sources={sources}
-          selectedSourceId={selectedSourceId}
-          onSelect={setSelectedSourceId}
-          onRefresh={loadAll}
-          api={api}
-        />
-        <CardsPanel
-          cards={cards}
-          sources={sources}
-          selectedSourceId={selectedSourceId}
-          onRefresh={loadAll}
-          api={api}
-        />
-        <div
-          style={{
-            gridColumn: "1 / -1",
-            background: "#fff",
-            border: "1px solid #d8deea",
-            borderRadius: 14,
-            padding: 16,
-          }}
-        >
-          <h2 style={{ margin: "0 0 16px" }}>Backend Data Snapshot</h2>
-          <BackendSnapshot sources={sources} cards={cards} user={user} />
-        </div>
-        <div
-          style={{
-            gridColumn: "1 / -1",
-            background: "#fff",
-            border: "1px solid #d8deea",
-            borderRadius: 14,
-            padding: 16,
-          }}
-        >
-          <h2 style={{ margin: "0 0 4px" }}>Retention Graph</h2>
-          <p style={{ margin: "0 0 16px", color: "#5e6678", fontSize: 13 }}>
-            Ebbinghaus forgetting curves per topic — past 7 days to exam
-          </p>
-          <RetentionChart cards={cards} sources={sources} sm2State={sm2State} />
-        </div>
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <SourcesTable
+                sources={sources}
+                selectedSourceId={selectedSourceId}
+                onSelect={setSelectedSourceId}
+                onRefresh={loadAll}
+                api={api}
+              />
+              <CardsPanel
+                cards={cards}
+                sources={sources}
+                selectedSourceId={selectedSourceId}
+                onRefresh={loadAll}
+                api={api}
+              />
+            </div>
+
+            {/* Charts Section */}
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold mb-4 text-slate-900">Retention Graph</h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  Ebbinghaus forgetting curves per topic — past 7 days to exam
+                </p>
+                <RetentionChart cards={cards} sources={sources} sm2State={sm2State} />
+              </div>
+
+              <div>
+                <h3 className="text-xl font-semibold mb-4 text-slate-900">Backend Data Snapshot</h3>
+                <BackendSnapshot sources={sources} cards={cards} user={user} />
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
-    </div>
+    </>
   );
 }
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>Loading...</div>}>
       <DashboardContent />
     </Suspense>
   );

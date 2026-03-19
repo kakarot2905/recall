@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Recall Dashboard",
@@ -12,7 +13,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, background: "#f6f7fb" }}>{children}</body>
+      <body style={{ margin: 0, background: "#ffffff" }}>
+        {children}
+      </body>
     </html>
   );
 }
