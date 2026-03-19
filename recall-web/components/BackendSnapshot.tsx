@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Source {
   _id: string;
@@ -52,18 +51,13 @@ function StatRow({
   muted?: boolean;
 }) {
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-border/50 last:border-b-0">
-      <div className="min-w-30 text-xs font-semibold text-muted-foreground">
+    <div className="flex items-center gap-2 px-3 py-1.5 text-sm border-b border-border/50 last:border-0">
+      <span className="text-xs text-muted-foreground min-w-[140px] flex-shrink-0">
         {label}
-      </div>
-      <div
-        className={cn(
-          "text-sm leading-relaxed",
-          muted ? "text-muted-foreground" : "text-foreground",
-        )}
-      >
+      </span>
+      <span className={cn("text-sm", muted ? "text-muted-foreground" : "text-foreground")}>
         {value}
-      </div>
+      </span>
     </div>
   );
 }
@@ -79,11 +73,11 @@ export default function BackendSnapshot({ sources, cards, user }: Props) {
 
   return (
     <div className="space-y-4 animate-slide-up">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Account Snapshot</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1">
+      <div className="border border-border rounded-lg overflow-hidden mb-2">
+        <div className="bg-muted px-3 py-1.5 text-[11px] font-mono uppercase tracking-widest text-muted-foreground border-b border-border flex items-center justify-between">
+          Account Snapshot
+        </div>
+        <div className="space-y-1">
           <StatRow
             label="User"
             value={
@@ -100,33 +94,24 @@ export default function BackendSnapshot({ sources, cards, user }: Props) {
           <StatRow label="Total Sources" value={sources.length} />
           <StatRow
             label="Total Cards"
-            value={`$${cards.length} — mcq: ${totalCounts.mcq}, short_answer: ${totalCounts.short_answer}, fill_blank: ${totalCounts.fill_blank}, fact: ${totalCounts.fact}`}
+            value={`${cards.length} — mcq: ${totalCounts.mcq}, short_answer: ${totalCounts.short_answer}, fill_blank: ${totalCounts.fill_blank}, fact: ${totalCounts.fact}`}
             muted
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {sources.map((source) => {
         const sourceCards = cardsBySource[String(source._id)] || [];
         const counts = countCardTypes(sourceCards);
         return (
-          <Card key={source._id}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <span className="flex-1">
-                  {source.topic || "Untitled"}
-                  {source.status && (
-                    <span className="ml-2 text-xs font-medium text-muted-foreground">
-                      • {source.status}
-                    </span>
-                  )}
-                </span>
-                <span className="text-xs font-semibold text-primary">
-                  {sourceCards.length} cards
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1">
+          <div key={source._id} className="border border-border rounded-lg overflow-hidden mb-2">
+            <div className="bg-muted px-3 py-1.5 text-[11px] font-mono uppercase tracking-widest text-muted-foreground border-b border-border flex items-center justify-between">
+              <span>{source.topic || "Untitled"}</span>
+              <span className="text-xs font-semibold text-primary">
+                {sourceCards.length} cards
+              </span>
+            </div>
+            <div className="space-y-1">
               <StatRow
                 label="Exam Date"
                 value={
@@ -145,8 +130,8 @@ export default function BackendSnapshot({ sources, cards, user }: Props) {
                 value={`mcq: ${counts.mcq}, short_answer: ${counts.short_answer}, fill_blank: ${counts.fill_blank}, fact: ${counts.fact}`}
                 muted
               />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         );
       })}
     </div>

@@ -8,6 +8,7 @@ import RetentionChart from "@/components/RetentionChart";
 import SourcesTable from "@/components/SourcesTable";
 import CardsPanel from "@/components/CardsPanel";
 import BackendSnapshot from "@/components/BackendSnapshot";
+import { Button } from "@/components/ui/button";
 
 function DashboardContent() {
   const searchParams = useSearchParams();

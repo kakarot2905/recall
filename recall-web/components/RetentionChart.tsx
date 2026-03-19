@@ -163,7 +163,7 @@ export default function RetentionChart({ cards, sources, sm2State }: Props) {
 
   if (!cards.length || !Object.keys(sm2State).length) {
     return (
-      <p style={{ color: "#5e6678", fontSize: 13 }}>
+      <p className="text-sm text-muted-foreground">
         No reviewed cards yet. Complete a calibration quiz to see your curves.
       </p>
     );
@@ -179,7 +179,7 @@ export default function RetentionChart({ cards, sources, sm2State }: Props) {
 
   if (!topics.length) {
     return (
-      <p style={{ color: "#5e6678", fontSize: 13 }}>
+      <p className="text-sm text-muted-foreground">
         No reviewed cards yet. Complete a calibration quiz to see your curves.
       </p>
     );
