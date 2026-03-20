@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo, Suspense } from "react";
@@ -51,7 +50,14 @@ interface Card {
   difficulty: number;
 }
 
-const COLORS = ["#6366f1", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
+const COLORS = [
+  "#6366f1",
+  "#06b6d4",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#8b5cf6",
+];
 const STATUS_CLASSES: Record<string, string> = {
   pending: "bg-warning/15 text-warning",
   processing: "bg-primary/15 text-primary",
@@ -90,7 +96,8 @@ function DashboardContent() {
       sessionStorage.setItem("recallDashboardToken", tokenFromUrl);
       router.replace("/dashboard");
     }
-    const storedToken = tokenFromUrl || sessionStorage.getItem("recallDashboardToken");
+    const storedToken =
+      tokenFromUrl || sessionStorage.getItem("recallDashboardToken");
     setToken(storedToken);
   }, []);
 
@@ -124,7 +131,9 @@ function DashboardContent() {
         api("/api/progress"),
       ]);
       setUser(dashboardData.user || null);
-      setSources(Array.isArray(dashboardData.sources) ? dashboardData.sources : []);
+      setSources(
+        Array.isArray(dashboardData.sources) ? dashboardData.sources : [],
+      );
       setCards(Array.isArray(dashboardData.cards) ? dashboardData.cards : []);
       setSm2State(progressData.sm2State || {});
       if (dashboardData.sources?.length) {
@@ -157,15 +166,16 @@ function DashboardContent() {
         const sourceCards = cards.filter((c) => c.sourceId === s._id);
         const reviewed = sourceCards.filter((c) => state[c._id]?.lastReviewed);
         if (reviewed.length === 0) return;
-        const avgRetention = reviewed.reduce((sum, c) => {
-          const st = state[c._id];
-          const lastReviewedMs = new Date(st.lastReviewed).getTime();
-          const dayEndMs = date.getTime() + 86399999;
-          if (lastReviewedMs > dayEndMs) return sum;
-          const S = Math.max((st.interval || 600000) / 86400000, 1);
-          const t = (dayEndMs - lastReviewedMs) / 86400000;
-          return sum + Math.exp(-t / S) * 100;
-        }, 0) / reviewed.length;
+        const avgRetention =
+          reviewed.reduce((sum, c) => {
+            const st = state[c._id];
+            const lastReviewedMs = new Date(st.lastReviewed).getTime();
+            const dayEndMs = date.getTime() + 86399999;
+            if (lastReviewedMs > dayEndMs) return sum;
+            const S = Math.max((st.interval || 600000) / 86400000, 1);
+            const t = (dayEndMs - lastReviewedMs) / 86400000;
+            return sum + Math.exp(-t / S) * 100;
+          }, 0) / reviewed.length;
         entry[s.topic] = Math.round(avgRetention * 10) / 10;
       });
       return entry;
@@ -174,10 +184,13 @@ function DashboardContent() {
 
   const totalCards = cards.length;
   const cardTypes = useMemo(() => {
-    return cards.reduce((acc, c) => {
-      acc[c.type] = (acc[c.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    return cards.reduce(
+      (acc, c) => {
+        acc[c.type] = (acc[c.type] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
   }, [cards]);
 
   const stats = [
@@ -197,31 +210,46 @@ function DashboardContent() {
   ];
 
   // --- Loading State ---
-  if (loading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="text-center animate-fade-in">
-        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-muted-foreground text-sm">Loading dashboard...</p>
+  if (loading)
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center animate-fade-in">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">Loading dashboard...</p>
+        </div>
       </div>
-    </div>
-  );
+    );
 
   // --- Error State ---
-  if (error) return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="text-center max-w-md animate-fade-in">
-        <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
+  if (error)
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+        <div className="text-center max-w-md animate-fade-in">
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="w-8 h-8 text-destructive"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-foreground mb-2">
+            Unable to Load Dashboard
+          </h2>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()} variant="outline">
+            Try Again
+          </Button>
         </div>
-        <h2 className="text-xl font-semibold text-foreground mb-2">Unable to Load Dashboard</h2>
-        <p className="text-muted-foreground mb-4">{error}</p>
-        <Button onClick={() => window.location.reload()} variant="outline">Try Again</Button>
       </div>
-    </div>
-  );
+    );
 
   // --- Main Layout ---
   return (
@@ -232,7 +260,9 @@ function DashboardContent() {
           <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
             <span className="text-primary text-sm font-bold">R</span>
           </div>
-          <span className="text-sm font-semibold text-foreground tracking-tightest">RECALL</span>
+          <span className="text-sm font-semibold text-foreground tracking-tightest">
+            RECALL
+          </span>
         </div>
         <nav className="flex-1 p-2 space-y-0.5">
           {tabs.map((tab) => (
@@ -281,7 +311,9 @@ function DashboardContent() {
         {/* Top bar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/95 backdrop-blur-sm sticky top-0 z-30">
           <div>
-            <h1 className="text-lg font-semibold text-foreground tracking-tightest">Dashboard</h1>
+            <h1 className="text-lg font-semibold text-foreground tracking-tightest">
+              Dashboard
+            </h1>
             <div className="text-[11px] font-mono text-muted-foreground uppercase tracking-widest-custom mt-0.5">
               {sources.length} sources · {cards.length} cards
             </div>
@@ -308,9 +340,7 @@ function DashboardContent() {
                   <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border">
                     {user?.name}
                   </div>
-                  <button
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors text-foreground"
-                  >
+                  <button className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors text-foreground">
                     Settings
                   </button>
                   <button
@@ -339,16 +369,27 @@ function DashboardContent() {
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-sm font-semibold text-foreground">Sources</span>
-                    <span className="text-xs text-muted-foreground ml-2">{sources.length} source(s)</span>
+                    <span className="text-sm font-semibold text-foreground">
+                      Sources
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-2">
+                      {sources.length} source(s)
+                    </span>
                   </div>
-                  <Button variant="outline" size="sm" className="text-xs h-8 px-3" disabled>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8 px-3"
+                    disabled
+                  >
                     Add Source
                   </Button>
                 </div>
                 {/* Add Source Form */}
                 <div className="bg-card border border-border rounded-lg p-4 space-y-3 mb-2">
-                  <div className="text-xs font-semibold text-foreground mb-2">+ Add New Source</div>
+                  <div className="text-xs font-semibold text-foreground mb-2">
+                    + Add New Source
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <input
                       placeholder="Topic e.g. Data Structures"
@@ -394,14 +435,20 @@ function DashboardContent() {
                   >
                     Add Source
                   </Button>
-                  {addError && <div className="text-xs text-destructive">{addError}</div>}
+                  {addError && (
+                    <div className="text-xs text-destructive">{addError}</div>
+                  )}
                 </div>
                 {/* Source List */}
                 <div className="space-y-2 mt-4">
                   {sources.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
-                      <span className="text-sm text-muted-foreground">No sources yet</span>
-                      <span className="text-xs text-muted-foreground/60 mt-1">Add one above to get started</span>
+                      <span className="text-sm text-muted-foreground">
+                        No sources yet
+                      </span>
+                      <span className="text-xs text-muted-foreground/60 mt-1">
+                        Add one above to get started
+                      </span>
                     </div>
                   ) : (
                     sources.map((source, i) => {
@@ -424,7 +471,9 @@ function DashboardContent() {
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-foreground truncate">{source.topic}</span>
+                              <span className="text-sm font-medium text-foreground truncate">
+                                {source.topic}
+                              </span>
                               <span
                                 className={`text-[10px] font-mono uppercase tracking-widest-custom px-1.5 py-0.5 rounded ${STATUS_CLASSES[source.status] || "bg-muted text-muted-foreground"}`}
                               >
@@ -437,7 +486,10 @@ function DashboardContent() {
                               </span>
                               {source.examDate && (
                                 <span className="text-[11px] font-mono text-muted-foreground">
-                                  Exam: {new Date(source.examDate).toLocaleDateString()}
+                                  Exam:{" "}
+                                  {new Date(
+                                    source.examDate,
+                                  ).toLocaleDateString()}
                                 </span>
                               )}
                             </div>
@@ -447,16 +499,31 @@ function DashboardContent() {
                             onClick={async (e) => {
                               e.stopPropagation();
                               if (confirm("Delete source and all its cards?")) {
-                                await api(`/api/sources/${source._id}`, { method: "DELETE" });
+                                await api(`/api/sources/${source._id}`, {
+                                  method: "DELETE",
+                                });
                                 loadAll();
                               }
                             }}
                           >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            <svg
+                              className="w-3.5 h-3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
                             </svg>
                           </button>
-                          <ChevronRight size={14} className="text-muted-foreground/50" />
+                          <ChevronRight
+                            size={14}
+                            className="text-muted-foreground/50"
+                          />
                         </motion.div>
                       );
                     })
@@ -470,8 +537,12 @@ function DashboardContent() {
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-sm font-semibold text-foreground">Cards</span>
-                    <span className="text-xs text-muted-foreground ml-2">{filteredCards.length} card(s)</span>
+                    <span className="text-sm font-semibold text-foreground">
+                      Cards
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-2">
+                      {filteredCards.length} card(s)
+                    </span>
                   </div>
                   <select
                     className="bg-muted border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -488,8 +559,12 @@ function DashboardContent() {
                 </div>
                 {filteredCards.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center">
-                    <span className="text-sm text-muted-foreground">No cards found</span>
-                    <span className="text-xs text-muted-foreground/60 mt-1">Select a source to view its cards</span>
+                    <span className="text-sm text-muted-foreground">
+                      No cards found
+                    </span>
+                    <span className="text-xs text-muted-foreground/60 mt-1">
+                      Select a source to view its cards
+                    </span>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -514,7 +589,9 @@ function DashboardContent() {
                                   <span
                                     key={idx}
                                     className={`w-1.5 h-1.5 rounded-full ${
-                                      idx < card.difficulty ? "bg-primary" : "bg-border"
+                                      idx < card.difficulty
+                                        ? "bg-primary"
+                                        : "bg-border"
                                     }`}
                                   />
                                 ))}
@@ -549,14 +626,17 @@ function DashboardContent() {
             {activeTab === "retention" && (
               <div className="p-6 space-y-4">
                 <div>
-                  <span className="text-sm font-semibold text-foreground">Retention Over Time</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    Retention Over Time
+                  </span>
                   <div className="text-xs text-muted-foreground mt-0.5">
                     SM2 forgetting curves per topic
                   </div>
                 </div>
                 {Object.keys(sm2State).length === 0 ? (
                   <p className="text-sm text-muted-foreground py-8 text-center">
-                    No reviewed cards yet. Complete a study session to see your curves.
+                    No reviewed cards yet. Complete a study session to see your
+                    curves.
                   </p>
                 ) : (
                   <div className="h-[300px] bg-card rounded-lg border border-border p-4">
@@ -564,23 +644,49 @@ function DashboardContent() {
                       <AreaChart data={retentionData}>
                         <defs>
                           {sources.map((s, i) => (
-                            <linearGradient key={s._id} id={`grad-${s._id}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.3} />
-                              <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0} />
+                            <linearGradient
+                              key={s._id}
+                              id={`grad-${s._id}`}
+                              x1="0"
+                              y1="0"
+                              x2="0"
+                              y2="1"
+                            >
+                              <stop
+                                offset="0%"
+                                stopColor={COLORS[i % COLORS.length]}
+                                stopOpacity={0.3}
+                              />
+                              <stop
+                                offset="100%"
+                                stopColor={COLORS[i % COLORS.length]}
+                                stopOpacity={0}
+                              />
                             </linearGradient>
                           ))}
                         </defs>
-                        <CartesianGrid stroke="hsl(215 15% 20%)" strokeDasharray="3 3" />
+                        <CartesianGrid
+                          stroke="hsl(215 15% 20%)"
+                          strokeDasharray="3 3"
+                        />
                         <XAxis
                           dataKey="day"
                           axisLine={false}
                           tickLine={false}
-                          tick={{ fill: "hsl(215 15% 55%)", fontSize: 11, fontFamily: "monospace" }}
+                          tick={{
+                            fill: "hsl(215 15% 55%)",
+                            fontSize: 11,
+                            fontFamily: "monospace",
+                          }}
                         />
                         <YAxis
                           axisLine={false}
                           tickLine={false}
-                          tick={{ fill: "hsl(215 15% 55%)", fontSize: 11, fontFamily: "monospace" }}
+                          tick={{
+                            fill: "hsl(215 15% 55%)",
+                            fontSize: 11,
+                            fontFamily: "monospace",
+                          }}
                           domain={[0, 100]}
                           tickFormatter={(v) => `${v}%`}
                         />
@@ -617,9 +723,13 @@ function DashboardContent() {
                         <div key={s._id} className="flex items-center gap-2">
                           <span
                             className="w-2.5 h-2.5 rounded-full"
-                            style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                            style={{
+                              backgroundColor: COLORS[i % COLORS.length],
+                            }}
                           />
-                          <span className="text-xs text-muted-foreground">{s.topic}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {s.topic}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -632,8 +742,12 @@ function DashboardContent() {
             {activeTab === "stats" && (
               <div className="p-6 space-y-6">
                 <div>
-                  <span className="text-sm font-semibold text-foreground">Backend Snapshot</span>
-                  <div className="text-xs text-muted-foreground mt-0.5">Live data from your account</div>
+                  <span className="text-sm font-semibold text-foreground">
+                    Backend Snapshot
+                  </span>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    Live data from your account
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   {stats.map((stat, i) => (
@@ -659,11 +773,16 @@ function DashboardContent() {
                   </div>
                   <div className="space-y-2">
                     {sources.map((source, i) => {
-                      const sourceCards = cards.filter((c) => c.sourceId === source._id);
-                      const typeBreakdown = sourceCards.reduce((acc, c) => {
-                        acc[c.type] = (acc[c.type] || 0) + 1;
-                        return acc;
-                      }, {} as Record<string, number>);
+                      const sourceCards = cards.filter(
+                        (c) => c.sourceId === source._id,
+                      );
+                      const typeBreakdown = sourceCards.reduce(
+                        (acc, c) => {
+                          acc[c.type] = (acc[c.type] || 0) + 1;
+                          return acc;
+                        },
+                        {} as Record<string, number>,
+                      );
                       return (
                         <motion.div
                           key={source._id}
@@ -673,28 +792,37 @@ function DashboardContent() {
                           className="p-4 rounded-lg border border-border bg-card"
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-foreground">{source.topic}</span>
+                            <span className="text-sm font-medium text-foreground">
+                              {source.topic}
+                            </span>
                             <span className="text-[10px] font-mono text-muted-foreground tabular-nums">
                               {source.cardCount || 0} cards
                             </span>
                           </div>
                           {Object.keys(typeBreakdown).length > 0 && (
                             <div className="flex gap-3 mt-2">
-                              {Object.entries(typeBreakdown).map(([type, count]) => (
-                                <span key={type} className="text-[10px] font-mono text-muted-foreground">
-                                  {type.replace("_", " ")}: {count}
-                                </span>
-                              ))}
+                              {Object.entries(typeBreakdown).map(
+                                ([type, count]) => (
+                                  <span
+                                    key={type}
+                                    className="text-[10px] font-mono text-muted-foreground"
+                                  >
+                                    {type.replace("_", " ")}: {count}
+                                  </span>
+                                ),
+                              )}
                             </div>
                           )}
                           {source.notes && (
                             <div className="text-[10px] font-mono text-muted-foreground/80 mt-1">
-                              Notes: {source.notes.slice(0, 60)}{source.notes.length > 60 ? "..." : ""}
+                              Notes: {source.notes.slice(0, 60)}
+                              {source.notes.length > 60 ? "..." : ""}
                             </div>
                           )}
                           {source.examDate && (
                             <div className="text-[10px] font-mono text-muted-foreground/60 mt-1">
-                              Exam: {new Date(source.examDate).toLocaleDateString()}
+                              Exam:{" "}
+                              {new Date(source.examDate).toLocaleDateString()}
                             </div>
                           )}
                         </motion.div>
@@ -713,11 +841,13 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
       <DashboardContent />
     </Suspense>
   );

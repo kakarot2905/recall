@@ -118,7 +118,9 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         }`}
       >
         {/* Header */}
-        <div className={`flex items-center p-4 border-b border-border ${expanded ? 'justify-between' : 'justify-center'}`}>
+        <div
+          className={`flex items-center p-4 border-b border-border ${expanded ? "justify-between" : "justify-center"}`}
+        >
           {expanded && (
             <span className="text-sm font-semibold text-foreground">Menu</span>
           )}

@@ -126,6 +126,11 @@
   let widgetRevealHeightTimerId = null;
   let widgetRevealFinalizeTimerId = null;
 
+  // Streak state variables
+  let streakCount = 0;
+  let streakMilestoneShown = false;
+  let streakBannerTimerId = null;
+
   const storageApi = typeof createStorageApi === "function"
     ? createStorageApi((error) => {
       if (idleTimerId) {
@@ -993,6 +998,118 @@
     }
   }
 
+  function injectStreakStyles() {
+    if (document.getElementById("recall-streak-styles")) {
+      return;
+    }
+
+    const style = document.createElement("style");
+    style.id = "recall-streak-styles";
+    style.textContent = `
+      #recall-streak-badge {
+        position: fixed;
+        z-index: 2147483647;
+        font-family: Segoe UI, Helvetica Neue, Arial, sans-serif;
+        display: none;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: rgba(197, 186, 255, 0.15);
+        border: 1px solid rgba(197, 186, 255, 0.4);
+        border-radius: 999px;
+        padding: 4px 10px 4px 7px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #C5BAFF;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 2px 12px rgba(197, 186, 255, 0.25);
+      }
+      #recall-streak-badge .streak-flame {
+        font-size: 14px;
+        margin-right: 4px;
+        display: inline-block;
+      }
+      #recall-streak-badge .streak-count {
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.02em;
+      }
+      #recall-streak-banner {
+        position: fixed;
+        z-index: 2147483647;
+        pointer-events: none;
+        display: none;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: linear-gradient(135deg, rgba(197,186,255,0.2), rgba(99,102,241,0.2));
+        border: 1px solid rgba(197, 186, 255, 0.5);
+        border-radius: 12px;
+        padding: 8px 16px;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        color: #C5BAFF;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 4px 24px rgba(197, 186, 255, 0.3), 0 0 0 1px rgba(197,186,255,0.1);
+        white-space: nowrap;
+      }
+      @keyframes recallStreakPop {
+        0%   { transform: scale(0.5); opacity: 0; }
+        60%  { transform: scale(1.2); opacity: 1; }
+        80%  { transform: scale(0.95); }
+        100% { transform: scale(1); }
+      }
+      @keyframes recallStreakPulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 2px 12px rgba(197,186,255,0.25); }
+        50%       { transform: scale(1.04); box-shadow: 0 4px 20px rgba(197,186,255,0.5); }
+      }
+      @keyframes recallStreakFlameSpin {
+        0%   { transform: rotate(-15deg) scale(1); }
+        25%  { transform: rotate(10deg) scale(1.2); }
+        50%  { transform: rotate(-8deg) scale(1.1); }
+        75%  { transform: rotate(6deg) scale(1.15); }
+        100% { transform: rotate(-15deg) scale(1); }
+      }
+      @keyframes recallStreakShake {
+        0%, 100% { transform: translateX(-50%) rotate(0deg); }
+        20%       { transform: translateX(calc(-50% - 4px)) rotate(-2deg); }
+        40%       { transform: translateX(calc(-50% + 4px)) rotate(2deg); }
+        60%       { transform: translateX(calc(-50% - 3px)) rotate(-1deg); }
+        80%       { transform: translateX(calc(-50% + 3px)) rotate(1deg); }
+      }
+      @keyframes recallStreakBannerIn {
+        0%   { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.9); }
+        60%  { opacity: 1; transform: translateX(-50%) translateY(2px) scale(1.02); }
+        100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+      }
+      @keyframes recallStreakBannerOut {
+        0%   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+        100% { opacity: 0; transform: translateX(-50%) translateY(-8px) scale(0.95); }
+      }
+      @keyframes recallStreakGlow {
+        0%, 100% { box-shadow: 0 4px 24px rgba(197,186,255,0.3), 0 0 0 1px rgba(197,186,255,0.1); }
+        50%       { box-shadow: 0 4px 32px rgba(197,186,255,0.6), 0 0 0 2px rgba(197,186,255,0.3), 0 0 40px rgba(197,186,255,0.15); }
+      }
+      @keyframes recallStreakCountBump {
+        0%   { transform: scale(1); }
+        40%  { transform: scale(1.4) translateY(-2px); }
+        70%  { transform: scale(0.9); }
+        100% { transform: scale(1); }
+      }
+      @keyframes recallRainbowBorder {
+        0%   { border-color: rgba(197,186,255,0.6); }
+        25%  { border-color: rgba(99,240,180,0.6); }
+        50%  { border-color: rgba(251,191,36,0.6); }
+        75%  { border-color: rgba(248,113,113,0.6); }
+        100% { border-color: rgba(197,186,255,0.6); }
+      }
+    `;
+    (document.head || document.documentElement).appendChild(style);
+  }
+
   function createWidget() {
     if (document.getElementById(WIDGET_ID)) {
       return document.getElementById(WIDGET_ID);
@@ -1201,6 +1318,24 @@
     wrapper.appendChild(body);
     wrapper.appendChild(footer);
     document.body.appendChild(wrapper);
+
+    // Streak badge creation
+    const streakBadge = document.createElement("div");
+    streakBadge.id = "recall-streak-badge";
+    const streakFlame = document.createElement("span");
+    streakFlame.className = "streak-flame";
+    streakFlame.textContent = "🔥";
+    const streakCountEl = document.createElement("span");
+    streakCountEl.className = "streak-count";
+    streakCountEl.textContent = "0";
+    streakBadge.appendChild(streakFlame);
+    streakBadge.appendChild(streakCountEl);
+    document.body.appendChild(streakBadge);
+
+    // Streak banner creation
+    const streakBanner = document.createElement("div");
+    streakBanner.id = "recall-streak-banner";
+    document.body.appendChild(streakBanner);
 
     const dndDot = document.createElement("div");
     dndDot.id = WIDGET_DOT_ID;
@@ -1443,6 +1578,159 @@
     return wrapper;
   }
 
+  function getStreakMilestone(count) {
+    if (count >= 20) return { emoji: "⚡", message: "LEGENDARY STREAK", color: "#fbbf24" };
+    if (count >= 15) return { emoji: "🌟", message: "UNSTOPPABLE!", color: "#a78bfa" };
+    if (count >= 10) return { emoji: "🔥", message: "ON FIRE!", color: "#f97316" };
+    if (count >= 7) return { emoji: "💥", message: "BLAZING STREAK", color: "#ec4899" };
+    if (count >= 5) return { emoji: "⚡", message: "STREAK x5!", color: "#6366f1" };
+    if (count >= 3) return { emoji: "✨", message: "3 in a row!", color: "#C5BAFF" };
+    return null;
+  }
+
+  function positionStreakElements() {
+    const widget = document.getElementById(WIDGET_ID);
+    const badge = document.getElementById("recall-streak-badge");
+    const banner = document.getElementById("recall-streak-banner");
+    if (!widget || !badge) return;
+    const rect = widget.getBoundingClientRect();
+    badge.style.top = (rect.top - 14) + "px";
+    badge.style.left = (rect.right - 60) + "px";
+    if (banner) {
+      banner.style.top = Math.max(8, rect.top - 52) + "px";
+    }
+  }
+
+  function updateStreakBadge() {
+    const badge = document.getElementById("recall-streak-badge");
+    if (!badge) return;
+    const countEl = badge.querySelector(".streak-count");
+    const flameEl = badge.querySelector(".streak-flame");
+    if (!countEl) return;
+    if (streakCount < 2) {
+      badge.style.display = "none";
+      badge.style.animation = "";
+      return;
+    }
+    positionStreakElements();
+    countEl.textContent = streakCount + " streak";
+    badge.style.display = "flex";
+    if (countEl.animate) {
+      countEl.animate(
+        [{ transform: "scale(1)" }, { transform: "scale(1.4) translateY(-2px)" }, { transform: "scale(1)" }],
+        { duration: 300, easing: "cubic-bezier(0.34,1.56,0.64,1)" }
+      );
+    }
+    if (flameEl.animate) {
+      flameEl.animate(
+        [
+          { transform: "rotate(-15deg) scale(1)" },
+          { transform: "rotate(10deg) scale(1.3)" },
+          { transform: "rotate(-8deg) scale(1.1)" },
+          { transform: "rotate(0deg) scale(1)" }
+        ],
+        { duration: 400, easing: "ease-out" }
+      );
+    }
+    if (streakCount >= 10) {
+      badge.style.background = "rgba(249,115,22,0.2)";
+      badge.style.borderColor = "rgba(249,115,22,0.5)";
+      badge.style.color = "#fb923c";
+      badge.style.animation = "recallStreakPulse 0.8s ease-in-out infinite, recallRainbowBorder 2s linear infinite";
+    } else if (streakCount >= 5) {
+      badge.style.background = "rgba(99,102,241,0.2)";
+      badge.style.borderColor = "rgba(99,102,241,0.5)";
+      badge.style.color = "#818cf8";
+      badge.style.animation = "recallStreakPulse 1s ease-in-out infinite";
+    } else {
+      badge.style.background = "rgba(197,186,255,0.15)";
+      badge.style.borderColor = "rgba(197,186,255,0.4)";
+      badge.style.color = "#C5BAFF";
+      badge.style.animation = "recallStreakPulse 1.5s ease-in-out infinite";
+    }
+  }
+
+  function showStreakMilestoneBanner(milestone) {
+    if (streakBannerTimerId) {
+      clearTimeout(streakBannerTimerId);
+      streakBannerTimerId = null;
+    }
+    const banner = document.getElementById("recall-streak-banner");
+    if (!banner) return;
+    positionStreakElements();
+    banner.innerHTML = "";
+    const emojiSpan = document.createElement("span");
+    emojiSpan.textContent = milestone.emoji;
+    emojiSpan.style.fontSize = "16px";
+    const msgSpan = document.createElement("span");
+    msgSpan.textContent = milestone.message;
+    const cntSpan = document.createElement("span");
+    cntSpan.textContent = streakCount + "×";
+    cntSpan.style.fontVariantNumeric = "tabular-nums";
+    cntSpan.style.opacity = "0.7";
+    cntSpan.style.fontSize = "11px";
+    banner.appendChild(emojiSpan);
+    banner.appendChild(msgSpan);
+    banner.appendChild(cntSpan);
+    banner.style.color = milestone.color;
+    banner.style.borderColor = milestone.color.replace(")", ", 0.5)").replace("rgb", "rgba").replace("#", "rgba(");
+    banner.style.display = "flex";
+    banner.style.animation = "recallStreakBannerIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both";
+    if (streakCount >= 10) {
+      banner.style.animation += ", recallStreakGlow 1.5s ease-in-out infinite 0.5s";
+    }
+    const hideDelay = streakCount >= 10 ? 3500 : 2200;
+    streakBannerTimerId = setTimeout(() => {
+      banner.style.animation = "recallStreakBannerOut 0.4s ease-in both";
+      setTimeout(() => {
+        banner.style.display = "none";
+        banner.style.animation = "";
+        streakBannerTimerId = null;
+      }, 400);
+    }, hideDelay);
+  }
+
+  function onCorrectAnswer(widget, cardId, quality, card) {
+    streakCount += 1;
+    streakMilestoneShown = false;
+    lastAnswerWasCorrect = true;
+    updateStreakBadge();
+    const milestone = getStreakMilestone(streakCount);
+    if (milestone) {
+      showStreakMilestoneBanner(milestone);
+    }
+    maybeFireFirstCorrectBurst(widget);
+    if (cardId) widgetSubmitReview(cardId, quality, card.sourceId);
+    animateAdvanceToNextCard(widget, cardId, true, quality);
+  }
+
+  function onWrongAnswer(widget, cardId, quality, card) {
+    streakCount = 0;
+    updateStreakBadge();
+    const banner = document.getElementById("recall-streak-banner");
+    if (banner && banner.style.display !== "none") {
+      if (streakBannerTimerId) clearTimeout(streakBannerTimerId); streakBannerTimerId = null;
+      banner.style.animation = "recallStreakBannerOut 0.3s ease-in both";
+      setTimeout(() => { banner.style.display = "none"; banner.style.animation = ""; }, 300);
+    }
+    const widgetEl = document.getElementById(WIDGET_ID);
+    if (widgetEl && widgetEl.animate) {
+      widgetEl.animate(
+        [
+          { transform: "translateX(0)" },
+          { transform: "translateX(-5px)" },
+          { transform: "translateX(5px)" },
+          { transform: "translateX(-4px)" },
+          { transform: "translateX(4px)" },
+          { transform: "translateX(0)" }
+        ],
+        { duration: 350, easing: "ease-out" }
+      );
+    }
+    lastAnswerWasCorrect = false;
+    if (cardId) widgetSubmitReview(cardId, quality, card.sourceId);
+  }
+
   function renderCurrentCard() {
     const widget = document.getElementById(WIDGET_ID);
     if (!widget) {
@@ -1598,10 +1886,9 @@
             const isCorrect = normalizeAnswer(option) === correctAnswer;
             if (!isCorrect) {
               pendingWrongAnswer = true;
-              lastAnswerWasCorrect = false;
               cardState[cardKey] = { answered: false, correct: false, userAnswer: option };
               currentCardInteracted = true;
-              if (card._id) widgetSubmitReview(card._id, 1, card.sourceId);
+              onWrongAnswer(widget, card._id, 1, card);
               window.setTimeout(() => {
                 cardState[cardKey] = { answered: true, correct: false, userAnswer: option };
                 pendingWrongAnswer = false;
@@ -1609,14 +1896,10 @@
               }, 180);
               return;
             }
-
             pendingWrongAnswer = false;
-            lastAnswerWasCorrect = true;
-            cardState[cardKey] = { answered: true, correct: isCorrect, userAnswer: option };
+            cardState[cardKey] = { answered: true, correct: true, userAnswer: option };
             currentCardInteracted = true;
-            maybeFireFirstCorrectBurst(widget);
-            if (card._id) widgetSubmitReview(card._id, 5, card.sourceId);
-            animateAdvanceToNextCard(widget, card._id, true, 5);
+            onCorrectAnswer(widget, card._id, 5, card);
           });
           body.appendChild(btn);
         });
@@ -1625,10 +1908,9 @@
         giveUpBtn.onclick = (e) => {
           e.stopPropagation();
           sessionGiveUpCount += 1;
-          lastAnswerWasCorrect = false;
           cardState[cardKey] = { answered: true, correct: false, userAnswer: null };
           currentCardInteracted = true;
-          if (card._id) widgetSubmitReview(card._id, 1, card.sourceId);
+          onWrongAnswer(widget, card._id, 1, card);
           renderCurrentCard();
         };
         body.appendChild(giveUpBtn);
@@ -1647,21 +1929,17 @@
         const yesBtn = createWidgetInputButton(WIDGET_ID, "Yes", "primary");
         yesBtn.onclick = (e) => {
           e.stopPropagation();
-          lastAnswerWasCorrect = true;
           cardState[cardKey] = { answered: true, correct: true, userAnswer: "yes" };
           currentCardInteracted = true;
-          maybeFireFirstCorrectBurst(widget);
-          if (card._id) widgetSubmitReview(card._id, 4, card.sourceId);
-          animateAdvanceToNextCard(widget, card._id, true, 4);
+          onCorrectAnswer(widget, card._id, 4, card);
         };
 
         const noBtn = createWidgetInputButton(WIDGET_ID, "No", "secondary");
         noBtn.onclick = (e) => {
           e.stopPropagation();
-          lastAnswerWasCorrect = false;
           cardState[cardKey] = { answered: true, correct: false, userAnswer: "no" };
           currentCardInteracted = true;
-          if (card._id) widgetSubmitReview(card._id, 2, card.sourceId);
+          onWrongAnswer(widget, card._id, 2, card);
           renderCurrentCard();
         };
 
@@ -1768,17 +2046,12 @@
           }
 
           cardState[cardKey] = { answered: true, correct: isCorrect, userAnswer: input.value };
-          lastAnswerWasCorrect = isCorrect;
           currentCardInteracted = true;
           if (isCorrect) {
-            maybeFireFirstCorrectBurst(widget);
-          }
-          if (card._id) widgetSubmitReview(card._id, quality, card.sourceId);
-          if (isCorrect) {
-            animateAdvanceToNextCard(widget, card._id, true, quality);
+            onCorrectAnswer(widget, card._id, quality, card);
             return;
           }
-
+          onWrongAnswer(widget, card._id, quality, card);
           renderCurrentCard();
         };
 
@@ -1786,10 +2059,9 @@
         giveUpBtn.onclick = (e) => {
           e.stopPropagation();
           sessionGiveUpCount += 1;
-          lastAnswerWasCorrect = false;
           cardState[cardKey] = { answered: true, correct: false, userAnswer: null };
           currentCardInteracted = true;
-          if (card._id) widgetSubmitReview(card._id, 1, card.sourceId);
+          onWrongAnswer(widget, card._id, 0, card);
           renderCurrentCard();
         };
 

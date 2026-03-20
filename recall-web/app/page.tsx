@@ -15,7 +15,9 @@ export default function LandingPage() {
           <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
             <span className="text-primary text-2xl font-bold">R</span>
           </div>
-          <span className="text-2xl font-bold text-foreground tracking-tightest">RECALL</span>
+          <span className="text-2xl font-bold text-foreground tracking-tightest">
+            RECALL
+          </span>
         </div>
         <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tightest text-center max-w-xl">
           Study smarter with spaced repetition

@@ -55,7 +55,12 @@ function StatRow({
       <span className="text-xs text-muted-foreground min-w-[140px] flex-shrink-0">
         {label}
       </span>
-      <span className={cn("text-sm", muted ? "text-muted-foreground" : "text-foreground")}>
+      <span
+        className={cn(
+          "text-sm",
+          muted ? "text-muted-foreground" : "text-foreground",
+        )}
+      >
         {value}
       </span>
     </div>
@@ -104,7 +109,10 @@ export default function BackendSnapshot({ sources, cards, user }: Props) {
         const sourceCards = cardsBySource[String(source._id)] || [];
         const counts = countCardTypes(sourceCards);
         return (
-          <div key={source._id} className="border border-border rounded-lg overflow-hidden mb-2">
+          <div
+            key={source._id}
+            className="border border-border rounded-lg overflow-hidden mb-2"
+          >
             <div className="bg-muted px-3 py-1.5 text-[11px] font-mono uppercase tracking-widest text-muted-foreground border-b border-border flex items-center justify-between">
               <span>{source.topic || "Untitled"}</span>
               <span className="text-xs font-semibold text-primary">
