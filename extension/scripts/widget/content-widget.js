@@ -174,7 +174,8 @@
             return;
           }
 
-          const response = await fetch("http://localhost:3000/api/progress", {
+          const API_BASE = (window.RecallConfig && window.RecallConfig.API_BASE_URL) || "http://localhost:3000/api";
+          const response = await fetch(`${API_BASE}/progress`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",

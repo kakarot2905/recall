@@ -4,7 +4,10 @@
   "version": "1.0.0",
   "description": "Generate personalized MCQs and flash cards from your notes",
   "permissions": ["storage", "activeTab", "identity"],
-  "host_permissions": ["http://localhost:3000/*"],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://recall-31rx.vercel.app/*"
+  ],
   "action": {
     "default_popup": "popup/popup.html",
     "default_title": "Recall - Study Smarter"
@@ -13,10 +16,14 @@
     "client_id": "751339140299-tl0lcurv051kp3gapcff4iigf51qli94.apps.googleusercontent.com",
     "scopes": ["openid", "email", "profile"]
   },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": [
+        "scripts/config.js",
         "scripts/widget/widget-shared.js",
         "scripts/widget/widget-runtime.js",
         "scripts/widget/widget-storage.js",

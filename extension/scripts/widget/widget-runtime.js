@@ -90,7 +90,8 @@
 
     async function semanticMatch(question, userAnswer, expectedAnswer) {
         try {
-            const response = await fetch("http://localhost:3000/api/check-answer", {
+            const API_BASE = (window.RecallConfig && window.RecallConfig.API_BASE_URL) || "http://localhost:3000/api";
+            const response = await fetch(`${API_BASE}/check-answer`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ question, userAnswer, expectedAnswer }),

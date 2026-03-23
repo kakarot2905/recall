@@ -46,7 +46,8 @@ const quizFeedback = document.getElementById("quizFeedback");
 const quizSubmitBtn = document.getElementById("quizSubmitBtn");
 const quizNextBtn = document.getElementById("quizNextBtn");
 
-const API_BASE_URL = "http://localhost:3000/api";
+const API_BASE_URL = (window.RecallConfig && window.RecallConfig.API_BASE_URL) || "http://localhost:3000/api";
+const DASHBOARD_URL = (window.RecallConfig && window.RecallConfig.DASHBOARD_URL) || "http://localhost:3000";
 
 const { sm2Calculate, sm2DefaultState } = window.RecallSM2 || {};
 const {
@@ -447,7 +448,7 @@ async function navigateToDashboard() {
     return;
   }
 
-  const dashboardUrl = `http://localhost:3000/dashboard?token=${encodeURIComponent(token)}`;
+  const dashboardUrl = `${DASHBOARD_URL}/dashboard?token=${encodeURIComponent(token)}`;
   window.open(dashboardUrl, "_blank");
 }
 
