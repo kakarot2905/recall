@@ -155,6 +155,7 @@ lib/
 | Dashboard loading bug | `token` state initialized as `null` caused permanent load block; fixed with `|| ""` fallback and relative API paths |
 | `recallExamDate`/`recallLastSourceId` cross-layer mismatch | Written to IndexedDB but read from `chrome.storage.local`; now mirrored to both layers in `popup.js` |
 | Card annotation missing | Cards now always have `topic` and `sourceId` injected before saving to `recallWidgetCards` |
+| Chrome Extension Google OAuth 500 error | `tokeninfo` endpoint doesn't return `email` for extension tokens; switched to `userinfo` endpoint which does; also use `userInfo.sub` as verified googleId |
 
 ---
 

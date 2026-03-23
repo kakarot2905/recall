@@ -14,39 +14,49 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const verifyResponse = await fetch(
-      `https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${accessToken}`,
+    // Verify the access token by fetching userinfo — this endpoint
+    // returns email for Chrome Extension tokens, unlike tokeninfo.
+    const userInfoResponse = await fetch(
+      `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`,
     );
 
-    if (!verifyResponse.ok) {
+    if (!userInfoResponse.ok) {
       return NextResponse.json(
         { error: "Invalid Google token" },
         { status: 401 },
       );
     }
 
-    const tokenInfo = await verifyResponse.json();
+    const userInfo = await userInfoResponse.json();
 
-    if (tokenInfo.email !== email) {
+    // Cross-check the email reported by the client matches the token owner.
+    if (!userInfo.email || userInfo.email !== email) {
       return NextResponse.json(
         { error: "Token email mismatch" },
         { status: 401 },
       );
     }
 
+    // Use Google's sub (subject) as the canonical googleId for extra safety.
+    const verifiedGoogleId = userInfo.sub || googleId;
+
     await connectDB();
 
-    let user = await User.findOne({ googleId });
+    let user = await User.findOne({ googleId: verifiedGoogleId });
 
     if (!user) {
       user = await User.findOne({ email });
 
       if (user && !user.googleId) {
-        user.googleId = googleId;
-        if (!user.name) user.name = name;
+        user.googleId = verifiedGoogleId;
+        if (!user.name) user.name = name || userInfo.name;
         await user.save();
       } else if (!user) {
-        user = new User({ email, name, googleId });
+        user = new User({
+          email,
+          name: name || userInfo.name,
+          googleId: verifiedGoogleId,
+        });
         await user.save();
       }
     }
