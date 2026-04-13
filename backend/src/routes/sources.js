@@ -16,14 +16,20 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const router = express.Router();
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const notesModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
 const NOTE_LENGTH_CONFIG = {
     short:  { wordRange: '200–350',  label: 'concise overview' },
     medium: { wordRange: '500–800',  label: 'detailed summary' },
     long:   { wordRange: '1000–1500', label: 'comprehensive deep-dive' },
 };
+
+let _notesModel = null;
+function getNotesModel() {
+    if (!_notesModel) {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        _notesModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    }
+    return _notesModel;
+}
 
 /**
  * POST /api/generate-notes
@@ -56,7 +62,8 @@ Return ONLY the notes as plain text with markdown formatting (headings, bullets,
         console.log('[GenerateNotes] Started', { topic, length, userId: req.user._id });
         const startedAt = Date.now();
 
-        const result = await notesModel.generateContent(prompt);
+        const model = getNotesModel();
+        const result = await model.generateContent(prompt);
         const response = await result.response;
         const notes = response.text().trim();
 
