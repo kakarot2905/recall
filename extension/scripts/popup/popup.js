@@ -18,13 +18,22 @@ const authFormError = document.getElementById("authFormError");
 const authSubmitBtn = document.getElementById("authSubmitBtn");
 const authToggle = document.getElementById("authToggle");
 const googleAuthBtn = document.getElementById("googleAuthBtn");
+const passwordToggle = document.getElementById("passwordToggle");
+const eyeIcon = document.getElementById("eyeIcon");
+const eyeOffIcon = document.getElementById("eyeOffIcon");
 
+const homeGreeting = document.getElementById("homeGreeting");
 const userName = document.getElementById("userName");
 const userEmail = document.getElementById("userEmail");
+const userBadgeInitial = document.getElementById("userBadgeInitial");
 const logoutBtn = document.getElementById("logoutBtn");
 const addTopicBtn = document.getElementById("addTopicBtn");
 const dashboardBtn = document.getElementById("dashboardBtn");
 const backToHomeBtn = document.getElementById("backToHomeBtn");
+
+const statDue = document.getElementById("statDue");
+const statStreak = document.getElementById("statStreak");
+const statTotal = document.getElementById("statTotal");
 
 const setupForm = document.getElementById("setupForm");
 const topicInput = document.getElementById("topicInput");
@@ -37,6 +46,12 @@ const formError = document.getElementById("formError");
 const progressStatus = document.getElementById("progressStatus");
 const setupStatus = document.getElementById("setupStatus");
 const generateBtn = document.getElementById("generateBtn");
+const generateBtnText = document.getElementById("generateBtnText");
+const aiGenerateBtn = document.getElementById("aiGenerateBtn");
+const aiGenerateBtnText = document.getElementById("aiGenerateBtnText");
+const aiGenError = document.getElementById("aiGenError");
+const lengthSelector = document.getElementById("lengthSelector");
+const notesCharCount = document.getElementById("notesCharCount");
 const stepRows = Array.from(document.querySelectorAll(".step"));
 const quizMeta = document.getElementById("quizMeta");
 const quizPrompt = document.getElementById("quizPrompt");
@@ -45,6 +60,8 @@ const quizAnswerInput = document.getElementById("quizAnswerInput");
 const quizFeedback = document.getElementById("quizFeedback");
 const quizSubmitBtn = document.getElementById("quizSubmitBtn");
 const quizNextBtn = document.getElementById("quizNextBtn");
+const quizProgressBar = document.getElementById("quizProgressBar");
+const toastEl = document.getElementById("toast");
 
 const API_BASE_URL = (window.RecallConfig && window.RecallConfig.API_BASE_URL) || "http://localhost:3000/api";
 const DASHBOARD_URL = (window.RecallConfig && window.RecallConfig.DASHBOARD_URL) || "http://localhost:3000";
@@ -62,6 +79,43 @@ const {
 } = window.RecallStorage || {};
 const { normalizeAnswer, normalizeText, fuzzyMatch } = window.RecallTextUtils || {};
 
+/* ── Toast Notifications ── */
+let toastTimerId = null;
+
+function showToast(message, type = "success", durationMs = 2500) {
+  if (!toastEl) return;
+  if (toastTimerId) { clearTimeout(toastTimerId); toastTimerId = null; }
+
+  toastEl.textContent = message;
+  toastEl.className = `toast toast-${type} toast-visible`;
+
+  toastTimerId = setTimeout(() => {
+    toastEl.classList.remove("toast-visible");
+    toastTimerId = null;
+  }, durationMs);
+}
+
+/* ── Time-of-day greeting ── */
+function getTimeGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 5) return "Good night";
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  if (hour < 21) return "Good evening";
+  return "Good night";
+}
+
+/* ── Password Toggle ── */
+if (passwordToggle) {
+  passwordToggle.addEventListener("click", () => {
+    const isPassword = authPassword.type === "password";
+    authPassword.type = isPassword ? "text" : "password";
+    eyeIcon.style.display = isPassword ? "none" : "block";
+    eyeOffIcon.style.display = isPassword ? "block" : "none";
+  });
+}
+
+/* ── SM-2 State ── */
 async function loadSM2State() {
   const result = await getLocalExtensionStorage(["recallSM2State"]);
   return result.recallSM2State || {};
@@ -334,7 +388,7 @@ async function waitForCompletion(sourceId) {
       progressStatus.textContent = "Generating study cards...";
       setStepState(1, 0);
     } else if (status === "done") {
-      progressStatus.textContent = "Cards ready.";
+      progressStatus.textContent = "Cards ready!";
       setStepState(-1, 2);
       return;
     } else if (status === "failed") {
@@ -418,13 +472,95 @@ async function handleLogout() {
     "recallWidgetCards",
   ]);
 
+  showToast("Signed out successfully", "success");
   showScreen("auth");
 }
 
 function updateUserDisplay() {
   if (authState.user) {
+    const firstName = (authState.user.name || "User").split(/\s+/)[0];
+    const greeting = getTimeGreeting();
+
+    homeGreeting.textContent = `${greeting}, ${firstName}!`;
     userName.textContent = authState.user.name || "User";
     userEmail.textContent = authState.user.email || "";
+
+    // Update avatar initial
+    const initial = (authState.user.name || authState.user.email || "U").charAt(0).toUpperCase();
+    userBadgeInitial.textContent = initial;
+  }
+}
+
+/* ── Stats Loading ── */
+async function loadHomeStats() {
+  // Show skeleton state
+  [statDue, statStreak, statTotal].forEach(el => el.classList.add("skeleton"));
+
+  try {
+    // Load cards and SM-2 state
+    const [storedCards, sm2State, todayStats] = await Promise.all([
+      getFromIndexedDB("recallCards"),
+      loadSM2State(),
+      getLocalExtensionStorage(["recallTodayStats"]),
+    ]);
+
+    const cards = Array.isArray(storedCards) ? storedCards : [];
+    const now = Date.now();
+
+    // Count due cards
+    let dueCount = 0;
+    cards.forEach(card => {
+      if (!card || !card._id) return;
+      const state = sm2State[card._id];
+      if (!state || !state.nextReview) { dueCount++; return; }
+      if (new Date(state.nextReview).getTime() <= now) { dueCount++; }
+    });
+
+    // Get today's streak
+    const today = new Date().toISOString().slice(0, 10);
+    const stats = todayStats.recallTodayStats;
+    const streakCount = (stats && stats.date === today) ? (Number(stats.count) || 0) : 0;
+
+    // Animate numbers in
+    animateStatValue(statDue, dueCount);
+    animateStatValue(statStreak, streakCount);
+    animateStatValue(statTotal, cards.length);
+  } catch {
+    statDue.textContent = "–";
+    statStreak.textContent = "–";
+    statTotal.textContent = "–";
+  }
+
+  // Remove skeleton class
+  [statDue, statStreak, statTotal].forEach(el => el.classList.remove("skeleton"));
+}
+
+function animateStatValue(element, targetValue) {
+  const duration = 400;
+  const start = performance.now();
+  const startVal = parseInt(element.textContent) || 0;
+
+  function tick(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+    const current = Math.round(startVal + (targetValue - startVal) * eased);
+    element.textContent = current;
+
+    if (progress < 1) {
+      requestAnimationFrame(tick);
+    }
+  }
+
+  requestAnimationFrame(tick);
+}
+
+let selectedNoteLength = "medium";
+
+function updateNotesCharCount() {
+  if (notesCharCount) {
+    const len = notesInput.value.length;
+    notesCharCount.textContent = `${len.toLocaleString()} chars`;
   }
 }
 
@@ -434,9 +570,78 @@ function navigateToAddTopic() {
   notesInput.value = "";
   examDateInput.value = "";
   clearErrors();
-  setSetupStatus("");
+  if (aiGenError) aiGenError.textContent = "";
+  selectedNoteLength = "medium";
+  setSetupStatus("Create flash cards from your notes");
+  updateNotesCharCount();
+
+  // Reset length pills
+  if (lengthSelector) {
+    lengthSelector.querySelectorAll(".length-pill").forEach(pill => {
+      pill.classList.toggle("is-active", pill.dataset.length === "medium");
+    });
+  }
 
   showScreen("setup");
+}
+
+/* ── AI Notes Generation ── */
+async function handleAiGenerate() {
+  const topic = topicInput.value.trim();
+
+  if (!topic) {
+    topicError.textContent = "Enter a topic name first";
+    topicInput.focus();
+    return;
+  }
+
+  if (aiGenError) aiGenError.textContent = "";
+  aiGenerateBtn.classList.add("btn-loading");
+  aiGenerateBtn.disabled = true;
+
+  try {
+    const { notes } = await callApi("/generate-notes", {
+      method: "POST",
+      body: JSON.stringify({
+        topic,
+        length: selectedNoteLength,
+      }),
+    });
+
+    if (!notes || !notes.trim()) {
+      throw new Error("AI returned empty notes");
+    }
+
+    // Typing animation effect
+    notesInput.value = "";
+    notesInput.classList.add("notes-typing");
+    const chunks = notes.match(/.{1,8}/gs) || [notes];
+    let charIndex = 0;
+
+    await new Promise((resolve) => {
+      const typeInterval = setInterval(() => {
+        if (charIndex >= chunks.length) {
+          clearInterval(typeInterval);
+          notesInput.classList.remove("notes-typing");
+          updateNotesCharCount();
+          resolve();
+          return;
+        }
+        notesInput.value += chunks[charIndex];
+        charIndex++;
+        notesInput.scrollTop = notesInput.scrollHeight;
+        updateNotesCharCount();
+      }, 12);
+    });
+
+    showToast(`Notes generated (${selectedNoteLength})! ✨`, "success");
+  } catch (error) {
+    if (aiGenError) aiGenError.textContent = error.message || "Failed to generate notes";
+    showToast("AI generation failed", "error");
+  } finally {
+    aiGenerateBtn.classList.remove("btn-loading");
+    aiGenerateBtn.disabled = false;
+  }
 }
 
 async function navigateToDashboard() {
@@ -457,12 +662,16 @@ function toggleAuthMode() {
 
   if (authState.isRegistering) {
     authNameField.style.display = "grid";
-    authSubmitBtn.textContent = "Register";
-    authToggle.textContent = "Already have an account? Login";
+    authSubmitBtn.textContent = "Create Account";
+    authToggle.textContent = "Already have an account? Sign in";
+    document.getElementById("authGreeting").textContent = "Create account";
+    document.getElementById("authSubtext").textContent = "Start your study journey";
   } else {
     authNameField.style.display = "none";
-    authSubmitBtn.textContent = "Login";
-    authToggle.textContent = "Don't have an account? Register";
+    authSubmitBtn.textContent = "Sign In";
+    authToggle.textContent = "Create an account";
+    document.getElementById("authGreeting").textContent = "Welcome back";
+    document.getElementById("authSubtext").textContent = "Sign in to continue studying";
   }
 
   clearAuthErrors();
@@ -500,6 +709,10 @@ async function handleAuth(event) {
     return;
   }
 
+  // Show loading state
+  authSubmitBtn.classList.add("btn-loading");
+  authSubmitBtn.disabled = true;
+
   const endpoint = authState.isRegistering ? "/auth/register" : "/auth/login";
   const body = {
     email: authEmail.value.trim(),
@@ -518,9 +731,13 @@ async function handleAuth(event) {
     });
 
     await saveAuthToken(token, user);
+    showToast(`Welcome${user.name ? `, ${user.name.split(/\s+/)[0]}` : ''}! 🎉`, "success");
     await initializeApp();
   } catch (error) {
     authFormError.textContent = error.message || "Authentication failed";
+  } finally {
+    authSubmitBtn.classList.remove("btn-loading");
+    authSubmitBtn.disabled = false;
   }
 }
 
@@ -534,12 +751,14 @@ async function handleGoogleAuth() {
       return;
     }
 
-    authFormError.textContent = "Opening Google Sign-In...";
+    authFormError.textContent = "";
     googleAuthBtn.disabled = true;
+    googleAuthBtn.classList.add("btn-loading");
 
     // Launch OAuth2 flow to get access token
     chrome.identity.getAuthToken({ interactive: true }, async (token) => {
       googleAuthBtn.disabled = false;
+      googleAuthBtn.classList.remove("btn-loading");
 
       if (chrome.runtime.lastError) {
         console.error('Chrome identity error:', chrome.runtime.lastError);
@@ -589,6 +808,7 @@ async function handleGoogleAuth() {
         await saveAuthToken(jwtToken, user);
         // Store Google access token for logout
         await saveToIndexedDB("recallGoogleToken", token);
+        showToast(`Welcome, ${user.name ? user.name.split(/\s+/)[0] : 'there'}! 🎉`, "success");
         await initializeApp();
 
       } catch (error) {
@@ -606,6 +826,7 @@ async function handleGoogleAuth() {
     console.error('Google auth error:', error);
     authFormError.textContent = error.message || "Google authentication failed";
     googleAuthBtn.disabled = false;
+    googleAuthBtn.classList.remove("btn-loading");
   }
 }
 
@@ -668,6 +889,25 @@ function getCalibrationCards(cards) {
   return mcqs.slice(0, 5);
 }
 
+/* ── Quiz Progress Bar ── */
+function renderQuizProgressBar() {
+  if (!quizProgressBar) return;
+  quizProgressBar.innerHTML = "";
+
+  for (let i = 0; i < quizState.cards.length; i++) {
+    const dot = document.createElement("div");
+    dot.className = "quiz-progress-dot";
+
+    if (i < quizState.currentIndex) {
+      dot.classList.add("is-done");
+    } else if (i === quizState.currentIndex) {
+      dot.classList.add("is-current");
+    }
+
+    quizProgressBar.appendChild(dot);
+  }
+}
+
 function renderOptionButtons(options) {
   quizOptions.innerHTML = "";
 
@@ -701,9 +941,11 @@ function getCurrentCard() {
 function renderCurrentCard() {
   const card = getCurrentCard();
 
+  renderQuizProgressBar();
+
   if (!card) {
     quizMeta.textContent = 'Done';
-    quizPrompt.textContent = 'Quick calibration complete. You are ready to review.';
+    quizPrompt.textContent = 'Calibration complete. You\'re all set to start reviewing!';
     quizOptions.innerHTML = '';
     quizAnswerInput.style.display = 'none';
     quizSubmitBtn.textContent = 'Go to Home';
@@ -713,11 +955,13 @@ function renderCurrentCard() {
     };
     quizNextBtn.disabled = true;
     quizFeedback.textContent = '';
+    quizFeedback.className = '';
     return;
   }
 
-  quizMeta.textContent = `Card ${quizState.currentIndex + 1} of ${quizState.cards.length}`;
+  quizMeta.textContent = `${quizState.currentIndex + 1} / ${quizState.cards.length}`;
   quizFeedback.textContent = "";
+  quizFeedback.className = "";
   quizSubmitBtn.textContent = "Check";
   quizSubmitBtn.disabled = false;
   quizSubmitBtn.onclick = null;
@@ -771,21 +1015,25 @@ async function checkCurrentAnswer() {
   if (card.type === "mcq") {
     if (!quizState.selectedOption) {
       quizFeedback.textContent = 'Please choose an option.';
+      quizFeedback.className = 'feedback-wrong';
       return;
     }
     const isCorrect =
       normalizeText(quizState.selectedOption) === normalizeText(card.correct);
     quality = isCorrect ? 5 : 1;
     quizFeedback.textContent = isCorrect
-      ? 'Correct.'
-      : `Not quite. Correct answer: ${card.correct || 'N/A'}`;
+      ? '✓ Correct!'
+      : `✗ Not quite. Answer: ${card.correct || 'N/A'}`;
+    quizFeedback.className = isCorrect ? 'feedback-correct' : 'feedback-wrong';
   } else if (card.type === "fact") {
     quality = 4;
-    quizFeedback.textContent = 'Fact noted. Click Next.';
+    quizFeedback.textContent = '✓ Fact noted. Click Next.';
+    quizFeedback.className = 'feedback-correct';
   } else {
     const typed = normalizeAnswer(quizAnswerInput.value);
     if (!typed) {
       quizFeedback.textContent = 'Please enter an answer.';
+      quizFeedback.className = 'feedback-wrong';
       return;
     }
     const correctAns = normalizeAnswer(card.answer || card.correct || "");
@@ -793,8 +1041,9 @@ async function checkCurrentAnswer() {
       || await semanticMatch(card.question || "", typed, correctAns);
     quality = isCorrect ? 5 : 1;
     quizFeedback.textContent = isCorrect
-      ? 'Correct.'
-      : `Not quite. Correct answer: ${card.answer || 'N/A'}`;
+      ? '✓ Correct!'
+      : `✗ Not quite. Answer: ${card.answer || 'N/A'}`;
+    quizFeedback.className = isCorrect ? 'feedback-correct' : 'feedback-wrong';
   }
 
   if (card._id) {
@@ -818,7 +1067,9 @@ async function finishCalibration() {
     await saveResultToStorage({ recallCalibrationCompleted: true });
   }
 
+  showToast("Calibration complete! 🎯", "success");
   updateUserDisplay();
+  await loadHomeStats();
   showScreen('home');
 }
 
@@ -835,6 +1086,7 @@ async function moveToNextCard() {
   if (!quizState.checked) {
     // Allow users to skip unanswered cards and continue calibration.
     quizFeedback.textContent = "Skipped.";
+    quizFeedback.className = "";
     quizState.checked = true;
   }
 
@@ -917,6 +1169,7 @@ async function runProgressSimulation() {
     recallLastSourceId: sourceId,
   });
 
+  showToast(`${cards.length} cards generated! 🃏`, "success");
   initCalibration(cards);
   showScreen("quiz");
 }
@@ -976,6 +1229,7 @@ async function bootstrapFromStoredCards() {
 
   // Otherwise, always show home screen after login
   updateUserDisplay();
+  await loadHomeStats();
   showScreen("home");
 }
 
@@ -1002,6 +1256,7 @@ addTopicBtn.addEventListener("click", navigateToAddTopic);
 dashboardBtn.addEventListener("click", navigateToDashboard);
 backToHomeBtn.addEventListener("click", () => {
   updateUserDisplay();
+  loadHomeStats();
   showScreen("home");
 });
 
@@ -1011,28 +1266,49 @@ quizNextBtn.addEventListener("click", () => moveToNextCard().catch(console.error
 setupForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  generateBtn.disabled = true;
-  generateBtn.textContent = "Generating...";
-
   if (!validateForm()) {
-    generateBtn.disabled = false;
-    generateBtn.textContent = "Generate";
     return;
   }
+
+  generateBtn.disabled = true;
+  generateBtn.classList.add("btn-loading");
 
   showScreen("progress");
 
   try {
     await runProgressSimulation();
     generateBtn.disabled = false;
-    generateBtn.textContent = "Generate";
+    generateBtn.classList.remove("btn-loading");
   } catch (error) {
     showScreen("setup");
     formError.textContent = error.message || "Failed to generate cards";
+    showToast("Generation failed. Please try again.", "error");
     generateBtn.disabled = false;
-    generateBtn.textContent = "Generate";
+    generateBtn.classList.remove("btn-loading");
   }
 });
 
+// AI generation panel listeners
+if (lengthSelector) {
+  lengthSelector.addEventListener("click", (e) => {
+    const pill = e.target.closest(".length-pill");
+    if (!pill) return;
+
+    selectedNoteLength = pill.dataset.length;
+    lengthSelector.querySelectorAll(".length-pill").forEach(p => {
+      p.classList.toggle("is-active", p === pill);
+    });
+  });
+}
+
+if (aiGenerateBtn) {
+  aiGenerateBtn.addEventListener("click", () => handleAiGenerate().catch(console.error));
+}
+
+if (notesInput) {
+  notesInput.addEventListener("input", updateNotesCharCount);
+}
+
 // Initialize app on load
 initializeApp();
+

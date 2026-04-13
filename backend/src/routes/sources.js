@@ -12,7 +12,67 @@ import {
     validateNormalizedCardPayload
 } from './sources.helpers.js';
 
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
 const router = express.Router();
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const notesModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+const NOTE_LENGTH_CONFIG = {
+    short:  { wordRange: '200–350',  label: 'concise overview' },
+    medium: { wordRange: '500–800',  label: 'detailed summary' },
+    long:   { wordRange: '1000–1500', label: 'comprehensive deep-dive' },
+};
+
+/**
+ * POST /api/generate-notes
+ * Generates AI study notes for a given topic and length.
+ */
+router.post('/generate-notes', authMiddleware, async (req, res) => {
+    try {
+        const topic = toTrimmedString(req.body.topic);
+        const length = (req.body.length || 'medium').toLowerCase();
+
+        if (!topic) {
+            return res.status(400).json({ error: 'Topic is required' });
+        }
+
+        const config = NOTE_LENGTH_CONFIG[length] || NOTE_LENGTH_CONFIG.medium;
+
+        const prompt = `You are an expert study material creator. Generate a ${config.label} of study notes on the topic: "${topic}".
+
+Requirements:
+- Target length: ${config.wordRange} words
+- Structure the notes with clear headings and sub-sections
+- Include key definitions, core concepts, and important facts
+- Use bullet points for lists of related items
+- Add brief real-world examples or analogies where helpful
+- Focus on exam-relevant, high-retention content
+- Write in clear, student-friendly language
+
+Return ONLY the notes as plain text with markdown formatting (headings, bullets, bold for key terms). Do not add any preamble or meta-commentary.`;
+
+        console.log('[GenerateNotes] Started', { topic, length, userId: req.user._id });
+        const startedAt = Date.now();
+
+        const result = await notesModel.generateContent(prompt);
+        const response = await result.response;
+        const notes = response.text().trim();
+
+        console.log('[GenerateNotes] Completed', {
+            topic,
+            length,
+            notesLength: notes.length,
+            durationMs: Date.now() - startedAt,
+        });
+
+        res.json({ notes });
+    } catch (error) {
+        console.error('POST /api/generate-notes error:', error);
+        res.status(500).json({ error: 'Failed to generate notes' });
+    }
+});
 
 /**
  * GET /api/dashboard-data

@@ -3,11 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Recall Popup</title>
+    <title>Recall — Study Smarter</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <main class="popup" id="popupRoot">
+      <!-- ═══ AUTH SCREEN ═══ -->
       <section class="screen active" id="screenAuth" aria-label="Authentication">
         <div class="popup-header">
           <div style="display: flex; align-items: center;">
@@ -15,25 +16,37 @@
             <span class="logo-text">RECALL</span>
           </div>
         </div>
-        <div style="padding: 20px;">
+        <div style="padding: 24px 20px 20px;">
           <div class="auth-welcome">
-            <h2>Welcome back</h2>
-            <p>Sign in to continue studying</p>
+            <h2 id="authGreeting">Welcome back</h2>
+            <p id="authSubtext">Sign in to continue studying</p>
           </div>
           <form class="form" id="authForm" novalidate>
             <div class="field">
               <label for="authEmail">Email</label>
-              <input id="authEmail" name="email" type="email" required />
+              <input id="authEmail" name="email" type="email" placeholder="you@email.com" required />
               <div class="error" id="authEmailError"></div>
             </div>
             <div class="field" id="authNameField" style="display: none">
               <label for="authName">Name</label>
-              <input id="authName" name="name" type="text" />
+              <input id="authName" name="name" type="text" placeholder="Your name" />
               <div class="error" id="authNameError"></div>
             </div>
             <div class="field">
               <label for="authPassword">Password</label>
-              <input id="authPassword" name="password" type="password" required />
+              <div class="password-field-wrapper">
+                <input id="authPassword" name="password" type="password" placeholder="••••••••" required />
+                <button class="password-toggle" type="button" id="passwordToggle" title="Show password">
+                  <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <svg id="eyeOffIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                </button>
+              </div>
               <div class="error" id="authPasswordError"></div>
             </div>
             <button class="btn btn-generate" id="authSubmitBtn" type="submit">Sign In</button>
@@ -53,6 +66,7 @@
         </div>
       </section>
 
+      <!-- ═══ HOME SCREEN ═══ -->
       <section class="screen" id="screenHome" aria-label="Home">
         <div class="popup-header">
           <div style="display: flex; align-items: center;">
@@ -61,11 +75,28 @@
           </div>
           <div class="user-badge" id="userBadge"><span id="userBadgeInitial">U</span></div>
         </div>
-        <div style="padding: 16px 20px;">
+        <div style="padding: 18px 20px;">
           <div class="home-greeting">
-            <h2>Hello!</h2>
+            <h2 id="homeGreeting">Hello!</h2>
             <p id="userName">User</p>
           </div>
+
+          <!-- Stats Row -->
+          <div class="stats-row" id="statsRow">
+            <div class="stat-card stat-card--due">
+              <div class="stat-value skeleton" id="statDue">0</div>
+              <div class="stat-label">Due today</div>
+            </div>
+            <div class="stat-card stat-card--streak">
+              <div class="stat-value skeleton" id="statStreak">0</div>
+              <div class="stat-label">Streak</div>
+            </div>
+            <div class="stat-card stat-card--total">
+              <div class="stat-value skeleton" id="statTotal">0</div>
+              <div class="stat-label">Total cards</div>
+            </div>
+          </div>
+
           <div class="nav-buttons">
             <button class="nav-btn nav-btn-primary" id="addTopicBtn" type="button">
               <div class="nav-btn-icon">
@@ -96,6 +127,7 @@
         </div>
       </section>
 
+      <!-- ═══ SETUP SCREEN ═══ -->
       <section class="screen" id="screenSetup" aria-label="Setup Form">
         <div class="popup-header">
           <div style="display: flex; align-items: center;">
@@ -113,12 +145,37 @@
           <form class="form" id="setupForm" novalidate>
             <div class="field">
               <label for="topicInput">Topic name</label>
-              <input id="topicInput" name="topic" type="text" required />
+              <input id="topicInput" name="topic" type="text" placeholder="e.g. Cell Biology" required />
               <div class="error" id="topicError"></div>
             </div>
+
+            <!-- AI Generate Panel -->
+            <div class="ai-gen-panel" id="aiGenPanel">
+              <div class="ai-gen-header">
+                <svg class="ai-gen-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span class="ai-gen-title">AI Notes Generator</span>
+              </div>
+              <p class="ai-gen-desc">Auto-generate study notes from a topic using AI</p>
+              <div class="ai-gen-controls">
+                <div class="length-selector" id="lengthSelector">
+                  <button type="button" class="length-pill" data-length="short">Short</button>
+                  <button type="button" class="length-pill is-active" data-length="medium">Medium</button>
+                  <button type="button" class="length-pill" data-length="long">Long</button>
+                </div>
+                <button type="button" class="btn btn-ai-gen" id="aiGenerateBtn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                  <span id="aiGenerateBtnText">Generate with AI</span>
+                </button>
+              </div>
+              <div class="error" id="aiGenError"></div>
+            </div>
+
             <div class="field">
-              <label for="notesInput">Notes</label>
-              <textarea id="notesInput" name="notes" placeholder="Paste your notes here..."></textarea>
+              <div class="notes-label-row">
+                <label for="notesInput">Notes</label>
+                <span class="notes-char-count" id="notesCharCount">0 chars</span>
+              </div>
+              <textarea id="notesInput" name="notes" placeholder="Paste your notes here or generate them with AI above..."></textarea>
               <div class="error" id="notesError"></div>
             </div>
             <div class="field">
@@ -126,12 +183,15 @@
               <input id="examDateInput" name="examDate" type="date" required style="color-scheme: dark;" />
               <div class="error" id="dateError"></div>
             </div>
-            <button class="btn btn-generate" id="generateBtn" type="submit">Generate</button>
+            <button class="btn btn-generate" id="generateBtn" type="submit">
+              <span id="generateBtnText">Generate Cards</span>
+            </button>
             <div class="error" id="formError"></div>
           </form>
         </div>
       </section>
 
+      <!-- ═══ PROGRESS SCREEN ═══ -->
       <section class="screen" id="screenProgress" aria-label="Agent Progress">
         <div class="popup-header">
           <div style="display: flex; align-items: center;">
@@ -160,7 +220,8 @@
         </div>
       </section>
 
-      <section class="screen" id="screenQuiz" aria-label="Calibration Quiz Placeholder">
+      <!-- ═══ QUIZ SCREEN ═══ -->
+      <section class="screen" id="screenQuiz" aria-label="Calibration Quiz">
         <div class="popup-header">
           <div style="display: flex; align-items: center;">
             <div class="logo-mark"><span>R</span></div>
@@ -170,6 +231,7 @@
         </div>
         <div style="padding: 20px;">
           <span class="quiz-label">CALIBRATION QUIZ</span>
+          <div class="quiz-progress" id="quizProgressBar"></div>
           <div class="quiz-card" id="quizCard">
             <p class="quiz-prompt" id="quizPrompt">Loading cards...</p>
             <div class="quiz-options" id="quizOptions"></div>
@@ -183,6 +245,9 @@
         </div>
       </section>
     </main>
+
+    <!-- Toast container -->
+    <div class="toast" id="toast"></div>
 
     <script src="../scripts/config.js"></script>
     <script src="../scripts/popup/popup-sm2.js"></script>
