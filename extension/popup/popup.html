@@ -81,6 +81,18 @@
             <p id="userName">User</p>
           </div>
 
+          <!-- Calibration Banner -->
+          <div id="calibrationBanner" class="calibration-banner hidden">
+            <div class="calibration-banner-content">
+              <span class="calibration-icon">⚡</span>
+              <div>
+                <div class="calibration-title">Calibration Required</div>
+                <div class="calibration-desc">Complete a quick quiz to set up your learning curve.</div>
+              </div>
+            </div>
+            <button id="startCalibrationBtn" class="btn-primary calibration-btn">Start</button>
+          </div>
+
           <!-- Stats Row -->
           <div class="stats-row" id="statsRow">
             <div class="stat-card stat-card--due">
@@ -117,6 +129,18 @@
               </div>
             </button>
           </div>
+
+          <!-- Upcoming Cards -->
+          <div class="upcoming-section" id="upcomingSection">
+            <div class="upcoming-header">
+              <span class="upcoming-title">Upcoming Cards</span>
+              <span class="upcoming-count" id="upcomingCount"></span>
+            </div>
+            <div class="upcoming-list" id="upcomingList">
+              <!-- Cards rendered by JS -->
+            </div>
+          </div>
+
           <div class="home-footer">
             <button id="logoutBtn" type="button">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>

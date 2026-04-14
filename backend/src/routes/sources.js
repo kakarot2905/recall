@@ -271,6 +271,10 @@ router.put('/sources/:sourceId', authMiddleware, async (req, res) => {
             source.examDate = parseOptionalExamDate(req.body.examDate);
         }
 
+        if (typeof req.body.isCalibrated !== 'undefined') {
+            source.isCalibrated = Boolean(req.body.isCalibrated);
+        }
+
         if (status && ['pending', 'processing', 'done', 'failed'].includes(status)) {
             source.status = status;
         }

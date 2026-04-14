@@ -31,6 +31,8 @@ export async function PUT(
   if (typeof body.notes !== "undefined") source.notes = notes;
   if (typeof body.examDate !== "undefined")
     source.examDate = parseOptionalExamDate(body.examDate);
+  if (typeof body.isCalibrated !== "undefined")
+    source.isCalibrated = Boolean(body.isCalibrated);
   if (status2 && ["pending", "processing", "done", "failed"].includes(status2))
     source.status = status2;
 

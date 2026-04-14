@@ -10,6 +10,10 @@ const sourceSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    isCalibrated: {
+        type: Boolean,
+        default: false
+    },
     notes: {
         type: String,
         required: true

@@ -34,6 +34,10 @@ const backToHomeBtn = document.getElementById("backToHomeBtn");
 const statDue = document.getElementById("statDue");
 const statStreak = document.getElementById("statStreak");
 const statTotal = document.getElementById("statTotal");
+const upcomingList = document.getElementById("upcomingList");
+const upcomingCount = document.getElementById("upcomingCount");
+const calibrationBanner = document.getElementById("calibrationBanner");
+const startCalibrationBtn = document.getElementById("startCalibrationBtn");
 
 const setupForm = document.getElementById("setupForm");
 const topicInput = document.getElementById("topicInput");
@@ -498,11 +502,21 @@ async function loadHomeStats() {
 
   try {
     // Load cards and SM-2 state
-    const [storedCards, sm2State, todayStats] = await Promise.all([
+    const [storedCards, sm2State, todayStats, { recallCalibrationCompleted }] = await Promise.all([
       getFromIndexedDB("recallCards"),
       loadSM2State(),
       getLocalExtensionStorage(["recallTodayStats"]),
+      loadFromStorage(["recallCalibrationCompleted"]),
     ]);
+
+    // Show/hide calibration banner
+    if (calibrationBanner) {
+      if (Array.isArray(storedCards) && storedCards.length > 0 && !recallCalibrationCompleted) {
+        calibrationBanner.classList.remove("hidden");
+      } else {
+        calibrationBanner.classList.add("hidden");
+      }
+    }
 
     const cards = Array.isArray(storedCards) ? storedCards : [];
     const now = Date.now();
@@ -525,6 +539,9 @@ async function loadHomeStats() {
     animateStatValue(statDue, dueCount);
     animateStatValue(statStreak, streakCount);
     animateStatValue(statTotal, cards.length);
+
+    // Render upcoming cards
+    renderUpcomingCards(cards, sm2State);
   } catch {
     statDue.textContent = "–";
     statStreak.textContent = "–";
@@ -553,6 +570,85 @@ function animateStatValue(element, targetValue) {
   }
 
   requestAnimationFrame(tick);
+}
+
+/* ── Upcoming Cards ── */
+function formatRelativeTime(ms) {
+  if (ms <= 0) return { text: "Due now", cls: "upcoming-time--now" };
+
+  const mins = Math.floor(ms / 60000);
+  const hrs = Math.floor(ms / 3600000);
+  const days = Math.floor(ms / 86400000);
+
+  if (mins < 1) return { text: "Due now", cls: "upcoming-time--now" };
+  if (mins < 60) return { text: `in ${mins}m`, cls: "upcoming-time--soon" };
+  if (hrs < 24) return { text: `in ${hrs}h`, cls: "" };
+  if (days === 1) return { text: "Tomorrow", cls: "" };
+  if (days < 7) return { text: `in ${days}d`, cls: "" };
+  return { text: `in ${Math.floor(days / 7)}w`, cls: "" };
+}
+
+function renderUpcomingCards(cards, sm2State) {
+  if (!upcomingList) return;
+
+  const now = Date.now();
+
+  // Build a list of cards with their next review time
+  const upcoming = cards
+    .filter(card => card && card._id)
+    .map(card => {
+      const state = sm2State[card._id];
+      const nextReview = state && state.nextReview
+        ? new Date(state.nextReview).getTime()
+        : now; // cards without SM-2 state are due now
+      return { card, nextReview };
+    })
+    .sort((a, b) => a.nextReview - b.nextReview)
+    .slice(0, 5);
+
+  // Update count badge
+  if (upcomingCount) {
+    upcomingCount.textContent = `${upcoming.length} of ${cards.length}`;
+  }
+
+  // Empty state
+  if (upcoming.length === 0) {
+    upcomingList.innerHTML = `
+      <div class="upcoming-empty">
+        <div class="upcoming-empty-icon">📚</div>
+        No cards yet. Add a topic to get started!
+      </div>`;
+    return;
+  }
+
+  // Render cards
+  upcomingList.innerHTML = upcoming.map(({ card, nextReview }) => {
+    const diff = nextReview - now;
+    const { text: timeText, cls: timeCls } = formatRelativeTime(diff);
+    const isDue = diff <= 0;
+    const type = card.type || "mcq";
+    const question = card.question || card.content || "Untitled card";
+    const topic = card.topic || "";
+    const typeLabel = type.replace("_", " ");
+
+    return `
+      <div class="upcoming-card upcoming-card--${isDue ? 'due' : type}">
+        <div class="upcoming-card-body">
+          <div class="upcoming-card-question">${escapeHtml(question)}</div>
+          <div class="upcoming-card-meta">
+            <span class="upcoming-type-badge upcoming-type-badge--${type}">${escapeHtml(typeLabel)}</span>
+            ${topic ? `<span class="upcoming-topic">${escapeHtml(topic)}</span>` : ''}
+            <span class="upcoming-time ${timeCls}">${timeText}</span>
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 let selectedNoteLength = "medium";
@@ -1065,6 +1161,24 @@ async function finishCalibration() {
   if (!quizState.completionSaved) {
     quizState.completionSaved = true;
     await saveResultToStorage({ recallCalibrationCompleted: true });
+
+    // Sync calibration status to backend
+    try {
+      const { recallLastSourceId } = await loadFromStorage(["recallLastSourceId"]);
+      if (recallLastSourceId) {
+        const token = await getAuthToken();
+        await fetch(`${window.RecallConfig.API_BASE_URL}/sources/${recallLastSourceId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ isCalibrated: true })
+        });
+      }
+    } catch (e) {
+      console.error("Failed to sync calibration status", e);
+    }
   }
 
   showToast("Calibration complete! 🎯", "success");
@@ -1220,14 +1334,7 @@ async function bootstrapFromStoredCards() {
     await setLocalExtensionStorage(storageSyncPayload);
   }
 
-  // Check if there are uncalibrated cards
-  if (hasGeneratedCards && !isCalibrated) {
-    initCalibration(recallCards);
-    showScreen("quiz");
-    return;
-  }
-
-  // Otherwise, always show home screen after login
+  // Always show home screen after login and bootstrap
   updateUserDisplay();
   await loadHomeStats();
   showScreen("home");
@@ -1250,6 +1357,16 @@ async function initializeApp() {
 authForm.addEventListener("submit", handleAuth);
 authToggle.addEventListener("click", toggleAuthMode);
 googleAuthBtn.addEventListener("click", handleGoogleAuth);
+
+if (startCalibrationBtn) {
+  startCalibrationBtn.addEventListener("click", async () => {
+    const cards = await getFromIndexedDB("recallCards");
+    if (Array.isArray(cards) && cards.length > 0) {
+      initCalibration(cards);
+      showScreen("quiz");
+    }
+  });
+}
 
 logoutBtn.addEventListener("click", handleLogout);
 addTopicBtn.addEventListener("click", navigateToAddTopic);
