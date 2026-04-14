@@ -52,8 +52,25 @@ Return ONLY the notes as plain text with markdown formatting (headings, bullets,
     });
     const startedAt = Date.now();
 
-    const result = await model.generateContent(prompt);
-    const notes = result.response.text().trim();
+    let notes = "";
+    let lastError;
+    // Retry logic for 503 "High Demand" errors
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const result = await model.generateContent(prompt);
+        notes = result.response.text().trim();
+        break; // Success, exit loop
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[GenerateNotes] Attempt ${attempt} failed:`, err?.message);
+        if (attempt < 3 && err?.message?.includes("503")) {
+          // Wait 1.5 seconds before retrying
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        } else {
+          throw err; // Not a 503 or max retries reached
+        }
+      }
+    }
 
     console.log("[GenerateNotes] Completed", {
       topic,
