@@ -1337,7 +1337,14 @@ async function bootstrapFromStoredCards() {
   // Always show home screen after login and bootstrap
   updateUserDisplay();
   await loadHomeStats();
-  showScreen("home");
+
+  // If there are generated cards but calibration isn't done, force the process
+  if (hasGeneratedCards && !isCalibrated) {
+    initCalibration(recallCards);
+    showScreen("quiz");
+  } else {
+    showScreen("home");
+  }
 }
 
 async function initializeApp() {
