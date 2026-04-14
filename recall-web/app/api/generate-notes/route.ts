@@ -63,10 +63,10 @@ Return ONLY the notes as plain text with markdown formatting (headings, bullets,
     });
 
     return NextResponse.json({ notes });
-  } catch (err) {
+  } catch (err: any) {
     console.error("POST /api/generate-notes error:", err);
     return NextResponse.json(
-      { error: "Failed to generate notes" },
+      { error: err?.message || "Failed to generate notes" },
       { status: 500 },
     );
   }
