@@ -53,15 +53,22 @@ ${notes}`;
 }
 
 /**
- * Agent 2: MCQ Generator
- * Generates 10 MCQ questions
+ * Agent 2: Mixed Cards Generator
+ * Generates 5 mixed questions in a single API request
  */
-export async function agent2(topic, enrichedContent) {
+export async function generateMixedCardsAgent(topic, enrichedContent) {
     try {
         const startedAt = Date.now();
         console.log('[Agent2] Started', { topic, contentLength: enrichedContent.length });
 
-        const prompt = `Based on the following content about "${topic}", generate 10 MCQ questions. Each must have exactly 4 options and 1 correct answer. Assign difficulty 1-5. For each card also include a short youtubeQuery (YouTube search terms) and googleQuery (Google search terms) to help the learner explore the concept further. Return ONLY a valid JSON array, no markdown, no explanation. Schema: [{ type: "mcq", question, options: [4 strings], correct, difficulty, youtubeQuery, googleQuery }]
+        const prompt = `Based on the following content about "${topic}", generate exactly 5 study cards.
+Please provide a mix of different types:
+- MCQ (type: "mcq", requires: question, options:[4 strings], correct)
+- Short Answer (type: "short_answer", requires: question, answer)
+- Fill in the Blank (type: "fill_blank", requires: question, answer)
+- Fact (type: "fact", requires: content)
+
+Assign difficulty 1-5 to each. For each card also include a short youtubeQuery (YouTube search terms) and googleQuery (Google search terms). Return ONLY a valid JSON array of 5 objects, no markdown, no explanation.
 
 Content:
 ${enrichedContent}`;
@@ -70,60 +77,18 @@ ${enrichedContent}`;
         const response = await result.response;
         let text = response.text().trim();
 
-        // Strip markdown code blocks if present
         text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '');
 
-        const mcqCards = JSON.parse(text);
+        const mixedCards = JSON.parse(text);
         console.log('[Agent2] Completed', {
             topic,
-            cardCount: Array.isArray(mcqCards) ? mcqCards.length : 0,
+            cardCount: Array.isArray(mixedCards) ? mixedCards.length : 0,
             durationMs: Date.now() - startedAt
         });
-        return mcqCards;
+        return mixedCards;
     } catch (error) {
         console.error('Agent 2 error:', error);
-        throw new Error('Failed to generate MCQ cards');
-    }
-}
-
-/**
- * Agent 3: Short Cards Generator
- * Generates short answer, fill blank, and fact cards
- */
-export async function agent3(topic, enrichedContent) {
-    try {
-        const startedAt = Date.now();
-        console.log('[Agent3] Started', { topic, contentLength: enrichedContent.length });
-
-        const prompt = `Based on the following content about "${topic}", generate:
-- 5 short answer questions with a single word answer
-- 5 fill in the blank questions with a single word answer
-- 5 one-line facts (informative statements, not questions)
-
-Assign difficulty 1-5 to each. For each card also include a short youtubeQuery (YouTube search terms) and googleQuery (Google search terms) to help the learner explore the concept further. Return ONLY a valid JSON array, no markdown, no explanation. Schema: [{ type: "short_answer"|"fill_blank"|"fact", question, answer, content, difficulty, youtubeQuery, googleQuery }]
-
-For facts: populate content only. For others: populate question and answer only.
-
-Content:
-${enrichedContent}`;
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        let text = response.text().trim();
-
-        // Strip markdown code blocks if present
-        text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-
-        const shortCards = JSON.parse(text);
-        console.log('[Agent3] Completed', {
-            topic,
-            cardCount: Array.isArray(shortCards) ? shortCards.length : 0,
-            durationMs: Date.now() - startedAt
-        });
-        return shortCards;
-    } catch (error) {
-        console.error('Agent 3 error:', error);
-        throw new Error('Failed to generate short cards');
+        throw new Error('Failed to generate mixed cards');
     }
 }
 
@@ -139,13 +104,14 @@ export async function runAgents(sourceId, topic, notes) {
         await Source.findByIdAndUpdate(sourceId, { status: 'processing' });
         console.log('[Pipeline] Source status updated', { sourceId, status: 'processing' });
 
-        // Run agents sequentially
+        // Step 1: Enrich notes
         const enrichedContent = await withRetry(() => agent1(topic, notes));
-        const mcqCards = await withRetry(() => agent2(topic, enrichedContent));
-        const shortCards = await withRetry(() => agent3(topic, enrichedContent));
+        
+        // Step 2: Generate 5 mixed cards in a single API request
+        const mixedCards = await withRetry(() => generateMixedCardsAgent(topic, enrichedContent));
 
-        // Combine all cards
-        const allCards = [...mcqCards, ...shortCards];
+        // Combine all cards (now just the mixed cards)
+        const allCards = [...mixedCards];
 
         // Save all cards to MongoDB
         const cardDocuments = allCards.map(card => ({
